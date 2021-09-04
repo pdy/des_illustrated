@@ -684,17 +684,8 @@ int main(int argc, char **argv)
   uint8_t key_bytes[KEY_SIZE] = {0};
   hex_str_to_bytes(key_file_buffer, KEY_HEXSTR_LEN, key_bytes);
 
-#ifdef LOG_KEY_DETAILS
-  //print_as_hexstr(key_bytes, sizeof key_bytes);
-  print_bin_8bit("K =", key_bytes, KEY_SIZE);
-#endif
-
   uint8_t key_pc1_bytes[KEY_PC1_SIZE] = {0};
   key_pc1(key_bytes, key_pc1_bytes);
-
-#ifdef LOG_KEY_DETAILS
-  print_bin_bits("K PC1 =", key_pc1_bytes, KEY_PC1_SIZE, 7);
-#endif
 
   const key_rotation_t key_rot = key_rotation(key_pc1_bytes);
   if(!key_rot.subkeys)
@@ -704,6 +695,10 @@ int main(int argc, char **argv)
   }
 
 #ifdef LOG_KEY_DETAILS
+  //print_as_hexstr(key_bytes, sizeof key_bytes);
+  print_bin_8bit("K =", key_bytes, KEY_SIZE);
+  print_bin_bits("K PC1 =", key_pc1_bytes, KEY_PC1_SIZE, 7);
+
   key_rotation_print(key_rot);
 #endif
   
@@ -724,14 +719,12 @@ int main(int argc, char **argv)
   uint8_t msg_ip_buff[MSG_IP_SIZE] = {0};
   msg_ip(msg_file_buffer, msg_ip_buff);
 
-#ifdef LOG_MSG_DETAILS
-  print_bin_with_title("M  =", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE, 4, 0);
-  print_bin_with_title("IP =", msg_ip_buff, MSG_IP_SIZE, 4, 0);
-#endif
-
   uint8_t L[MSG_LR_SIZE] = {0}, R[MSG_LR_SIZE] = {0};
   msg_get_LR(msg_ip_buff, L, R);
+
 #ifdef LOG_MSG_LR_DETAILS
+  print_bin_with_title("M  =", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE, 4, 0);
+  print_bin_with_title("IP =", msg_ip_buff, MSG_IP_SIZE, 4, 0);
   print_bin_with_title("L0 =", L, MSG_LR_SIZE, 4, 0); 
   print_bin_with_title("R0 =", R, MSG_LR_SIZE, 4, 0); 
 #endif
