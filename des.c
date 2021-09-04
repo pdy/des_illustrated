@@ -11,18 +11,19 @@
 #define KEY_HEXSTR_LEN (KEY_SIZE * 2)
 #define KEY_ITER_SIZE KEY_PC2_SIZE
 #define KEY_SUBKEYS_NUM 16
-#define E_BIT_SIZE 6
 
 #define MSG_SINGLE_BLOCK_SIZE 8
 #define MSG_IP_SIZE 8
 #define MSG_LR_SIZE 4
+#define E_BIT_SIZE 6
+#define B_INDICES_SIZE 8
 
 //#define LOG_KEY_DETAILS
 //#define LOG_KEY_CD_DETAILS
 //#define LOG_MSG_DETAILS
 #define LOG_MSG_LR_DETAILS
 
-#define GET_BYTE_IDX(bit_pos) ((size_t)(bit_pos - 1) / 8)
+#define GET_BYTE_IDX(bit_idx) ((size_t)(bit_idx - 1) / 8)
 
 void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg);
 void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg);
@@ -637,16 +638,168 @@ static void msg_ebit_selection(const uint8_t * const R, uint8_t *ret)
   ret[5] |= R[GET_BYTE_IDX(1) ] >> 7 & 0x01;
 }
 
+static uint8_t sbox[8][64] = {
+
+  /* S1 */
+  {
+    14,  4, 13,  1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9,  0,  7,
+    0, 15,  7,  4, 14,  2, 13,  1, 10,  6, 12, 11,  9,  5,  3,  8,
+    4,  1, 14,  8, 13,  6,  2, 11, 15, 12,  9,  7,  3, 10,  5,  0,
+    15, 12,  8,  2,  4,  9,  1,  7,  5, 11,  3, 14, 10,  0,  6, 13
+  },
+
+  /* S2 */
+  {
+    15,  1,  8, 14,  6, 11,  3,  4,  9,  7,  2, 13, 12,  0,  5, 10,
+    3, 13,  4,  7, 15,  2,  8, 14, 12,  0,  1, 10,  6,  9, 11,  5,
+    0, 14,  7, 11, 10,  4, 13,  1,  5,  8, 12,  6,  9,  3,  2, 15,
+    13,  8, 10,  1,  3, 15,  4,  2, 11,  6,  7, 12,  0,  5, 14,  9
+  },
+
+  /* S3 */
+  {
+    10,  0,  9, 14,  6,  3, 15,  5,  1, 13, 12,  7, 11,  4,  2,  8,
+    13,  7,  0,  9,  3,  4,  6, 10,  2,  8,  5, 14, 12, 11, 15,  1,
+    13,  6,  4,  9,  8, 15,  3,  0, 11,  1,  2, 12,  5, 10, 14,  7,
+    1, 10, 13,  0,  6,  9,  8,  7,  4, 15, 14,  3, 11,  5,  2, 12
+  },
+
+  /* S4 */
+  {
+    7, 13, 14,  3,  0,  6,  9, 10,  1,  2,  8,  5, 11, 12,  4, 15,
+    13,  8, 11,  5,  6, 15,  0,  3,  4,  7,  2, 12,  1, 10, 14,  9,
+    10,  6,  9,  0, 12, 11,  7, 13, 15,  1,  3, 14,  5,  2,  8,  4,
+    3, 15,  0,  6, 10,  1, 13,  8,  9,  4,  5, 11, 12,  7,  2, 14
+  },
+
+  /* S5 */
+  {
+    2, 12,  4,  1,  7, 10, 11,  6,  8,  5,  3, 15, 13,  0, 14,  9,
+    14, 11,  2, 12,  4,  7, 13,  1,  5,  0, 15, 10,  3,  9,  8,  6,
+    4,  2,  1, 11, 10, 13,  7,  8, 15,  9, 12,  5,  6,  3,  0, 14,
+    11,  8, 12,  7,  1, 14,  2, 13,  6, 15,  0,  9, 10,  4,  5,  3
+  },
+
+  /* S6 */
+  {
+    12,  1, 10, 15,  9,  2,  6,  8,  0, 13,  3,  4, 14,  7,  5, 11,
+    10, 15,  4,  2,  7, 12,  9,  5,  6,  1, 13, 14,  0, 11,  3,  8,
+    9, 14, 15,  5,  2,  8, 12,  3,  7,  0,  4, 10,  1, 13, 11,  6,
+    4,  3,  2, 12,  9,  5, 15, 10, 11, 14,  1,  7,  6,  0,  8, 13
+  },
+
+  /* S7 */
+  {
+    4, 11,  2, 14, 15,  0,  8, 13,  3, 12,  9,  7,  5, 10,  6,  1,
+    13,  0, 11,  7,  4,  9,  1, 10, 14,  3,  5, 12,  2, 15,  8,  6,
+    1,  4, 11, 13, 12,  3,  7, 14, 10, 15,  6,  8,  0,  5,  9,  2,
+    6, 11, 13,  8,  1,  4, 10,  7,  9,  5,  0, 15, 14,  2,  3, 12
+  },
+
+  /* S8 */
+  {
+    13,  2,  8,  4,  6, 15, 11,  1, 10,  9,  3, 14,  5,  0, 12,  7,
+    1, 15, 13,  8, 10,  3,  7,  4, 12,  5,  6, 11,  0, 14,  9,  2,
+    7, 11,  4,  1,  9, 12, 14,  2,  0,  6, 10, 13, 15,  3,  5,  8,
+    2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11
+  }
+};
+
+static void calc_b_indices(const uint8_t * const e_bit_key_xored, size_t key_xored_size, uint8_t *retB)
+{
+  /*
+   *
+   *  Every 6 bits from e_bit_key_xored needs to be placed
+   *  int every byte in retB on last positions.
+   *
+   *  Given begining sequence of 011000   010001
+   *  be obtain two bytes      00011000 00010001
+   *
+   */
+
+  size_t b_idx = 0;
+  size_t bit_cnt = 1;
+  for(size_t i = 1; i <= key_xored_size * 8; ++i, ++bit_cnt)
+  {
+    uint8_t new_bit_map = 0;
+    {
+      switch(bit_cnt)
+      {
+        case 1:
+          new_bit_map = 0x20;
+          break;
+        case 2:
+          new_bit_map = 0x10;
+          break;
+        case 3:
+          new_bit_map = 0x08;
+          break;
+        case 4:
+          new_bit_map = 0x04;
+          break;
+        case 5:
+          new_bit_map = 0x02;
+          break;
+        case 6:
+          new_bit_map = 0x01;
+          break;
+      }
+    }
+
+    uint8_t old_bit_byte_idx = 0;
+    {
+      while((i + old_bit_byte_idx) % 8 != 0)
+        ++old_bit_byte_idx;
+
+      old_bit_byte_idx = 8 - old_bit_byte_idx;
+    }
+
+    const uint8_t new_bit_byte_idx = (uint8_t)bit_cnt + 2;
+    const int shift = abs((int)new_bit_byte_idx - (int)old_bit_byte_idx);
+
+    const uint8_t e_bit_byte = e_bit_key_xored[GET_BYTE_IDX(i)];
+    if(new_bit_byte_idx == old_bit_byte_idx)
+      retB[b_idx] |= e_bit_byte & new_bit_map;
+    else if(new_bit_byte_idx < old_bit_byte_idx)
+      retB[b_idx] |= e_bit_byte << shift & new_bit_map;
+    else
+      retB[b_idx] |= e_bit_byte >> shift & new_bit_map;
+
+    if(bit_cnt % 6 == 0)
+    {
+      bit_cnt = 0;
+      ++b_idx;
+    }
+  }
+}
+
 static void calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
 {
   uint8_t e_bit[E_BIT_SIZE] = {0};
   msg_ebit_selection(R, e_bit);
 
+  uint8_t e_bit_key_xored[E_BIT_SIZE] = {0};
+  for(size_t i = 0; i < E_BIT_SIZE && i < key_rot.size; ++i)
+  {
+    e_bit_key_xored[i] = e_bit[i] ^ key_rot.ptr[i];
+  }
+
+  uint8_t b_indices[B_INDICES_SIZE] = {0};
+  calc_b_indices(e_bit_key_xored, E_BIT_SIZE, b_indices);
+
 #ifdef LOG_MSG_LR_DETAILS
   const size_t num = key_rot.it - 1;
   char title_str[10 + 1] = {0};
   sprintf(title_str, "E%zu =", num);
-  print_bin_with_title(title_str, e_bit, E_BIT_SIZE, 6, 0); 
+  print_bin_with_title(title_str, e_bit, E_BIT_SIZE, 6, 0);
+
+  memset(title_str, 0x00, 10 + 1);
+  sprintf(title_str, "K%zuE%zu =", key_rot.it, num);
+  print_bin_with_title(title_str, e_bit_key_xored, E_BIT_SIZE, 6, 0);
+
+  memset(title_str, 0x00, 10 + 1);
+  sprintf(title_str, "B%zu =", key_rot.it);
+  print_bin_with_title(title_str, b_indices, B_INDICES_SIZE, 8, 0);
 #endif
 }
 
