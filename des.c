@@ -584,7 +584,7 @@ static void msg_get_LR(const uint8_t * const ipbuffer, uint8_t *retL, uint8_t *r
   memcpy(retR, ipbuffer + MSG_LR_SIZE, MSG_LR_SIZE);
 }
 
-static void copy_LR(const uint8_t * const from, uint8_t *to)
+static void msg_copy_LR(const uint8_t * const from, uint8_t *to)
 {
   memcpy(to, from, MSG_LR_SIZE);
 }
@@ -726,7 +726,7 @@ static uint8_t sbox[8][64] = {
   }
 };
 
-static void calc_b_indices(const uint8_t * const e_bit_key_xored, size_t key_xored_size, uint8_t *retB)
+static void msg_calc_b_indices(const uint8_t * const e_bit_key_xored, size_t key_xored_size, uint8_t *retB)
 {
   /*
    *
@@ -794,7 +794,7 @@ static void calc_b_indices(const uint8_t * const e_bit_key_xored, size_t key_xor
   }
 }
 
-static void calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
+static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
 {
   uint8_t e_bit[MSG_E_BIT_SIZE] = {0};
   msg_ebit_selection(R, e_bit);
@@ -806,7 +806,7 @@ static void calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotati
   }
 
   uint8_t b_indices[MSG_B_INDICES_SIZE] = {0};
-  calc_b_indices(e_bit_key_xored, MSG_E_BIT_SIZE, b_indices);
+  msg_calc_b_indices(e_bit_key_xored, MSG_E_BIT_SIZE, b_indices);
 
 #ifdef LOG_MSG_LR_DETAILS
   const size_t num = key_rot.it - 1;
@@ -906,10 +906,10 @@ int main(int argc, char **argv)
   uint8_t R_tmp[MSG_LR_SIZE] = {0};
   for(size_t i=1; i <= 1; ++i)
   {
-    calc_Rn(L, R, key_get_iteration(key_rot, i), R_tmp);
+    msg_calc_Rn(L, R, key_get_iteration(key_rot, i), R_tmp);
 
-    copy_LR(R, L);
-    copy_LR(R_tmp, R);
+    msg_copy_LR(R, L);
+    msg_copy_LR(R_tmp, R);
   }
 
 msg_end:
