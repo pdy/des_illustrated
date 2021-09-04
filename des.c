@@ -15,8 +15,8 @@
 #define MSG_SINGLE_BLOCK_SIZE 8
 #define MSG_IP_SIZE 8
 #define MSG_LR_SIZE 4
-#define E_BIT_SIZE 6
-#define B_INDICES_SIZE 8
+#define MSG_E_BIT_SIZE 6
+#define MSG_B_INDICES_SIZE 8
 
 //#define LOG_KEY_DETAILS
 //#define LOG_KEY_CD_DETAILS
@@ -361,6 +361,15 @@ static void key_pc2(const uint8_t * const buffer, uint8_t *ret)
 
 void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
 {
+  /*
+   *
+   *  We're taking into account additional four bits a the begining of the sequence.
+   *  First bit of the sequence is on the 0x08 position of the buffer[0];
+   *
+   *  Check comment in key_rotation function for more details.
+   *
+   */
+
   const uint8_t last_bit = buffer[0] >> 3 & 0x01;
 
   uint8_t add_bit  = 0x00;
@@ -376,12 +385,22 @@ void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
       add_bit = 0x00;
   }
 
-  buffer[0] &= 0x0f;
-  buffer[size - 1] |= last_bit; 
+  buffer[0] &= 0x0f; // zeroing first four bits
+  buffer[size - 1] |= last_bit;
 }
 
 static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 {
+  /*
+   *
+   *  Key PC1 has 56 bits - 7 bytes and we need to split it in half on 28 bits.
+   *  We split it on two 4 bytes buffers where each one has
+   *  zeroed first four bits in the first byte.
+   *
+   *  Shift function has to take into account additional bits.
+   *
+   */
+
   uint8_t c_i[4] = 
   {
     ((key_pc1_buffer[0] & 0xf0) >> 4),
@@ -437,6 +456,8 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
     print_bin_simple(title_str, d_i, 4);
 #endif
 
+    // CD is joined togheter without padding bits on first
+    // four positions of Cn and Dn
     const uint8_t cd[7] =
     {
       (uint8_t)((c_i[0] & 0x0f) << 4 | (c_i[1] & 0xf0) >> 4),
@@ -775,31 +796,31 @@ static void calc_b_indices(const uint8_t * const e_bit_key_xored, size_t key_xor
 
 static void calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
 {
-  uint8_t e_bit[E_BIT_SIZE] = {0};
+  uint8_t e_bit[MSG_E_BIT_SIZE] = {0};
   msg_ebit_selection(R, e_bit);
 
-  uint8_t e_bit_key_xored[E_BIT_SIZE] = {0};
-  for(size_t i = 0; i < E_BIT_SIZE && i < key_rot.size; ++i)
+  uint8_t e_bit_key_xored[MSG_E_BIT_SIZE] = {0};
+  for(size_t i = 0; i < MSG_E_BIT_SIZE && i < key_rot.size; ++i)
   {
     e_bit_key_xored[i] = e_bit[i] ^ key_rot.ptr[i];
   }
 
-  uint8_t b_indices[B_INDICES_SIZE] = {0};
-  calc_b_indices(e_bit_key_xored, E_BIT_SIZE, b_indices);
+  uint8_t b_indices[MSG_B_INDICES_SIZE] = {0};
+  calc_b_indices(e_bit_key_xored, MSG_E_BIT_SIZE, b_indices);
 
 #ifdef LOG_MSG_LR_DETAILS
   const size_t num = key_rot.it - 1;
   char title_str[10 + 1] = {0};
   sprintf(title_str, "E%zu =", num);
-  print_bin_with_title(title_str, e_bit, E_BIT_SIZE, 6, 0);
+  print_bin_with_title(title_str, e_bit, MSG_E_BIT_SIZE, 6, 0);
 
   memset(title_str, 0x00, 10 + 1);
   sprintf(title_str, "K%zuE%zu =", key_rot.it, num);
-  print_bin_with_title(title_str, e_bit_key_xored, E_BIT_SIZE, 6, 0);
+  print_bin_with_title(title_str, e_bit_key_xored, MSG_E_BIT_SIZE, 6, 0);
 
   memset(title_str, 0x00, 10 + 1);
   sprintf(title_str, "B%zu =", key_rot.it);
-  print_bin_with_title(title_str, b_indices, B_INDICES_SIZE, 8, 0);
+  print_bin_with_title(title_str, b_indices, MSG_B_INDICES_SIZE, 8, 0);
 #endif
 }
 
