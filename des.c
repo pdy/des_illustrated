@@ -849,12 +849,12 @@ static void msg_p_permut(const uint8_t * const sbox_result, uint8_t *ret)
   ret[1] |= sbox_result[GET_BYTE_IDX(5) ]      & 0x08;
   ret[1] |= sbox_result[GET_BYTE_IDX(18)] >> 4 & 0x04;
   ret[1] |= sbox_result[GET_BYTE_IDX(31)]      & 0x02;
-  ret[1] |= sbox_result[GET_BYTE_IDX(10)] >> 5 & 0x01;
+  ret[1] |= sbox_result[GET_BYTE_IDX(10)] >> 6 & 0x01;
 
   ret[2] |= sbox_result[GET_BYTE_IDX(2) ] << 1 & 0x80;
   ret[2] |= sbox_result[GET_BYTE_IDX(8) ] << 6 & 0x40;
   ret[2] |= sbox_result[GET_BYTE_IDX(24)] << 5 & 0x20;
-  ret[2] |= sbox_result[GET_BYTE_IDX(14)] << 4 & 0x10;
+  ret[2] |= sbox_result[GET_BYTE_IDX(14)] << 2 & 0x10;
 
   ret[2] |= sbox_result[GET_BYTE_IDX(32)] << 3 & 0x08;
   ret[2] |= sbox_result[GET_BYTE_IDX(27)] >> 3 & 0x04;
@@ -867,7 +867,7 @@ static void msg_p_permut(const uint8_t * const sbox_result, uint8_t *ret)
   ret[3] |= sbox_result[GET_BYTE_IDX(6) ] << 2 & 0x10;
 
   ret[3] |= sbox_result[GET_BYTE_IDX(22)] << 1 & 0x08;
-  ret[3] |= sbox_result[GET_BYTE_IDX(11)] >> 1 & 0x04;
+  ret[3] |= sbox_result[GET_BYTE_IDX(11)] >> 3 & 0x04;
   ret[3] |= sbox_result[GET_BYTE_IDX(4) ] >> 3 & 0x02;
   ret[3] |= sbox_result[GET_BYTE_IDX(25)] >> 7 & 0x01;
 }
@@ -1025,7 +1025,7 @@ int main(int argc, char **argv)
 
   uint8_t Rn[MSG_LR_SIZE] = {0};
   //uint8_t Ln[MSG_LR_SIZE] = {0};
-  for(size_t i=1; i <= 5; ++i)
+  for(size_t i=1; i <= 16; ++i)
   {
     //memset(Rn, 0x00, MSG_LR_SIZE);    
     //memset(Ln, 0x00, MSG_LR_SIZE);    
@@ -1053,8 +1053,8 @@ int main(int argc, char **argv)
   msg_combine_final_LR(L, R, final_LR);
 
 #ifdef LOG_MSG_LR_DETAILS
-  //printf("\n");
-  //print_bin_8bit("R16L16 =", final_LR, MSG_SINGLE_BLOCK_SIZE);
+  printf("\n");
+  print_bin_8bit("R16L16 =", final_LR, MSG_SINGLE_BLOCK_SIZE);
 #endif
 
 msg_end:
