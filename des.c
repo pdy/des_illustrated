@@ -17,6 +17,8 @@
 #define MSG_LR_SIZE 4
 #define MSG_E_BIT_SIZE 6
 #define MSG_B_INDICES_SIZE 8
+#define MSG_SBOX_ROW_SIZE 16
+#define MSG_SBOX_SELECTION_SIZE 4
 
 //#define LOG_KEY_DETAILS
 //#define LOG_KEY_CD_DETAILS
@@ -659,7 +661,7 @@ static void msg_ebit_selection(const uint8_t * const R, uint8_t *ret)
   ret[5] |= R[GET_BYTE_IDX(1) ] >> 7 & 0x01;
 }
 
-static uint8_t sbox[8][64] = {
+static const uint8_t g_sboxes[8][64] = {
 
   /* S1 */
   {
@@ -794,6 +796,23 @@ static void msg_calc_b_indices(const uint8_t * const e_bit_key_xored, size_t key
   }
 }
 
+static uint8_t msg_b_row_num(uint8_t six_bit_byte)
+{
+  // 0x20 bit goes to 0x02 and 0x01 goes to 0x01
+
+  uint8_t ret = 0x00;
+  ret |= six_bit_byte >> 4 & 0x02;
+  ret |= six_bit_byte & 0x01;
+
+  return ret;
+}
+
+static uint8_t msg_b_col_num(uint8_t six_bit_byte)
+{
+  // 0x1e (0001 1110) goes to 0x0f
+  return (uint8_t)six_bit_byte >> 1 & 0x0f;
+}
+
 static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
 {
   uint8_t e_bit[MSG_E_BIT_SIZE] = {0};
@@ -808,6 +827,32 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
   uint8_t b_indices[MSG_B_INDICES_SIZE] = {0};
   msg_calc_b_indices(e_bit_key_xored, MSG_E_BIT_SIZE, b_indices);
 
+  uint8_t sbox_selection[MSG_SBOX_SELECTION_SIZE] = {0};
+  size_t sbox_selection_idx = 0;
+  for(size_t i = 0; i < MSG_B_INDICES_SIZE && sbox_selection_idx < MSG_SBOX_SELECTION_SIZE; ++i)
+  {
+    const uint8_t *sbox = g_sboxes[i];
+
+    const uint8_t row_num = msg_b_row_num(b_indices[i]);
+    const uint8_t col_num = msg_b_col_num(b_indices[i]);
+    const uint8_t s_num = sbox[MSG_SBOX_ROW_SIZE * row_num + col_num ];
+    
+    if((i + 1) % 2 == 0)
+    {
+      // place on the 0x0f plus increase counter
+      sbox_selection[sbox_selection_idx] &= 0xf0; // most likely redundant
+      sbox_selection[sbox_selection_idx] |= (s_num & 0x0f);
+      ++sbox_selection_idx;
+    }
+    else
+    {
+      // place on the 0xf0 
+      sbox_selection[sbox_selection_idx] &= 0x0f; // most likely redundant
+      sbox_selection[sbox_selection_idx] |= (s_num << 4 & 0xf0);
+    }
+
+  }
+
 #ifdef LOG_MSG_LR_DETAILS
   const size_t num = key_rot.it - 1;
   char title_str[10 + 1] = {0};
@@ -821,6 +866,8 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
   memset(title_str, 0x00, 10 + 1);
   sprintf(title_str, "B%zu =", key_rot.it);
   print_bin_with_title(title_str, b_indices, MSG_B_INDICES_SIZE, 8, 0);
+
+  print_bin_with_title("S(B) =", sbox_selection, MSG_SBOX_SELECTION_SIZE, 4, 0);
 #endif
 }
 
