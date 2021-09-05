@@ -21,11 +21,11 @@
 #define MSG_SBOX_SELECTION_SIZE 4
 #define MSG_P_PERMUT_SIZE 4
 
-//#define LOG_KEY_DETAILS
+#define LOG_KEY_DETAILS
 //#define LOG_KEY_CD_DETAILS
 //#define LOG_MSG_DETAILS
 #define LOG_MSG_LR_DETAILS
-//#define LOG_MSG_LR_INTERNAL_DETAILS
+#define LOG_MSG_LR_INTERNAL_DETAILS
 
 #define GET_BYTE_IDX(bit_idx) ((size_t)(bit_idx - 1) / 8)
 
@@ -624,11 +624,11 @@ static void msg_ebit_selection(const uint8_t * const R, uint8_t *ret)
   ret[1] |= R[GET_BYTE_IDX(9) ] >> 5 & 0x04;
   ret[1] |= R[GET_BYTE_IDX(10)] >> 5 & 0x02;
   ret[1] |= R[GET_BYTE_IDX(11)] >> 5 & 0x01;
-  ret[2] |= R[GET_BYTE_IDX(12)] >> 1 & 0x80;
-  ret[2] |= R[GET_BYTE_IDX(13)] >> 1 & 0x40;
+  ret[2] |= R[GET_BYTE_IDX(12)] << 3 & 0x80;
+  ret[2] |= R[GET_BYTE_IDX(13)] << 3 & 0x40;
   
-  ret[2] |= R[GET_BYTE_IDX(12)] >> 3 & 0x20;
-  ret[2] |= R[GET_BYTE_IDX(13)] >> 3 & 0x10;
+  ret[2] |= R[GET_BYTE_IDX(12)] << 1 & 0x20;
+  ret[2] |= R[GET_BYTE_IDX(13)] << 1 & 0x10;
   ret[2] |= R[GET_BYTE_IDX(14)] << 1 & 0x08;
   ret[2] |= R[GET_BYTE_IDX(15)] << 1 & 0x04;
   ret[2] |= R[GET_BYTE_IDX(16)] << 1 & 0x02;
@@ -652,11 +652,11 @@ static void msg_ebit_selection(const uint8_t * const R, uint8_t *ret)
   ret[4] |= R[GET_BYTE_IDX(25)] >> 5 & 0x04;
   ret[4] |= R[GET_BYTE_IDX(26)] >> 5 & 0x02;
   ret[4] |= R[GET_BYTE_IDX(27)] >> 5 & 0x01;
-  ret[5] |= R[GET_BYTE_IDX(28)] >> 1 & 0x80;
-  ret[5] |= R[GET_BYTE_IDX(29)] >> 1 & 0x40;
+  ret[5] |= R[GET_BYTE_IDX(28)] << 3 & 0x80;
+  ret[5] |= R[GET_BYTE_IDX(29)] << 3 & 0x40;
 
-  ret[5] |= R[GET_BYTE_IDX(28)] >> 3 & 0x20;
-  ret[5] |= R[GET_BYTE_IDX(29)] >> 3 & 0x10;
+  ret[5] |= R[GET_BYTE_IDX(28)] << 1 & 0x20;
+  ret[5] |= R[GET_BYTE_IDX(29)] << 1 & 0x10;
   ret[5] |= R[GET_BYTE_IDX(30)] << 1 & 0x08;
   ret[5] |= R[GET_BYTE_IDX(31)] << 1 & 0x04;
   ret[5] |= R[GET_BYTE_IDX(32)] << 1 & 0x02;
@@ -919,7 +919,7 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
     out_R[i] = L[i] ^ p_permut[i];
 
 #ifdef LOG_MSG_LR_INTERNAL_DETAILS
-  const size_t num = key_rot.it - 1;
+  const size_t num = key_rot.it;
   char title_str[10 + 1] = {0};
   sprintf(title_str, "E%zu =", num);
   print_bin_with_title(title_str, e_bit, MSG_E_BIT_SIZE, 6, 0);
@@ -1025,7 +1025,7 @@ int main(int argc, char **argv)
 
   uint8_t Rn[MSG_LR_SIZE] = {0};
   //uint8_t Ln[MSG_LR_SIZE] = {0};
-  for(size_t i=1; i <= 16; ++i)
+  for(size_t i=1; i <= 5; ++i)
   {
     //memset(Rn, 0x00, MSG_LR_SIZE);    
     //memset(Ln, 0x00, MSG_LR_SIZE);    
@@ -1038,14 +1038,14 @@ int main(int argc, char **argv)
 
 #ifdef LOG_MSG_LR_DETAILS
     char title_str[10 + 1] = {0};
-    sprintf(title_str, "L%zu =", i);
-    print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
+    //sprintf(title_str, "L%zu =", i);
+    //print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
    
     memset(title_str, 0x00, 10 + 1);
     sprintf(title_str, "R%zu =", i);
     print_bin_with_title(title_str, R, MSG_LR_SIZE, 4, 0);
 
-    //printf("\n");
+    printf("\n");
 #endif
   }
 
@@ -1053,7 +1053,8 @@ int main(int argc, char **argv)
   msg_combine_final_LR(L, R, final_LR);
 
 #ifdef LOG_MSG_LR_DETAILS
-  print_bin_8bit("R16L16 =", final_LR, MSG_SINGLE_BLOCK_SIZE);
+  //printf("\n");
+  //print_bin_8bit("R16L16 =", final_LR, MSG_SINGLE_BLOCK_SIZE);
 #endif
 
 msg_end:
