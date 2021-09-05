@@ -389,7 +389,7 @@ static void key_pc2(const uint8_t * const buffer, uint8_t *ret)
   ret[5] |= buffer[GET_BYTE_IDX(32)]      & 0x01;
 }
 
-void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
+static void shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
 {
   /*
    *
