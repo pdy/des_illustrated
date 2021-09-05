@@ -25,6 +25,7 @@
 //#define LOG_KEY_CD_DETAILS
 //#define LOG_MSG_DETAILS
 #define LOG_MSG_LR_DETAILS
+//#define LOG_MSG_LR_INTERNAL_DETAILS
 
 #define GET_BYTE_IDX(bit_idx) ((size_t)(bit_idx - 1) / 8)
 
@@ -914,7 +915,10 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
   uint8_t p_permut[MSG_P_PERMUT_SIZE] = {0};
   msg_p_permut(sbox_selection, p_permut);
 
-#ifdef LOG_MSG_LR_DETAILS
+  for(size_t i = 0; i < MSG_P_PERMUT_SIZE && i < MSG_LR_SIZE; ++i)
+    out_R[i] = L[i] ^ p_permut[i];
+
+#ifdef LOG_MSG_LR_INTERNAL_DETAILS
   const size_t num = key_rot.it - 1;
   char title_str[10 + 1] = {0};
   sprintf(title_str, "E%zu =", num);
@@ -931,6 +935,12 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
   print_bin_with_title("S(B) =", sbox_selection, MSG_SBOX_SELECTION_SIZE, 4, 0);
   print_bin_with_title("P(S) =", p_permut, MSG_P_PERMUT_SIZE, 4, 0);
 #endif
+}
+
+static void msg_combine_final_LR(const uint8_t * const L, const uint8_t * const R, uint8_t *final_LR)
+{
+  memcpy(final_LR, R, MSG_LR_SIZE);
+  memcpy(final_LR + MSG_LR_SIZE, L, MSG_LR_SIZE);
 }
 
 int main(int argc, char **argv)
@@ -1009,17 +1019,42 @@ int main(int argc, char **argv)
   print_bin_with_title("M  =", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE, 4, 0);
   print_bin_with_title("IP =", msg_ip_buff, MSG_IP_SIZE, 4, 0);
   print_bin_with_title("L0 =", L, MSG_LR_SIZE, 4, 0); 
-  print_bin_with_title("R0 =", R, MSG_LR_SIZE, 4, 0); 
+  print_bin_with_title("R0 =", R, MSG_LR_SIZE, 4, 0);
+  printf("\n"); 
 #endif
 
-  uint8_t R_tmp[MSG_LR_SIZE] = {0};
-  for(size_t i=1; i <= 1; ++i)
+  uint8_t Rn[MSG_LR_SIZE] = {0};
+  //uint8_t Ln[MSG_LR_SIZE] = {0};
+  for(size_t i=1; i <= 16; ++i)
   {
-    msg_calc_Rn(L, R, key_get_iteration(key_rot, i), R_tmp);
+    //memset(Rn, 0x00, MSG_LR_SIZE);    
+    //memset(Ln, 0x00, MSG_LR_SIZE);    
+   
+    //msg_copy_LR(R, Ln);
+    msg_calc_Rn(L, R, key_get_iteration(key_rot, i), Rn);
 
     msg_copy_LR(R, L);
-    msg_copy_LR(R_tmp, R);
+    msg_copy_LR(Rn, R);
+
+#ifdef LOG_MSG_LR_DETAILS
+    char title_str[10 + 1] = {0};
+    sprintf(title_str, "L%zu =", i);
+    print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
+   
+    memset(title_str, 0x00, 10 + 1);
+    sprintf(title_str, "R%zu =", i);
+    print_bin_with_title(title_str, R, MSG_LR_SIZE, 4, 0);
+
+    //printf("\n");
+#endif
   }
+
+  uint8_t final_LR[MSG_SINGLE_BLOCK_SIZE] = {0};
+  msg_combine_final_LR(L, R, final_LR);
+
+#ifdef LOG_MSG_LR_DETAILS
+  print_bin_8bit("R16L16 =", final_LR, MSG_SINGLE_BLOCK_SIZE);
+#endif
 
 msg_end:
   free_key_rot(key_rot);
