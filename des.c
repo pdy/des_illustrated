@@ -19,6 +19,7 @@
 #define MSG_B_INDICES_SIZE 8
 #define MSG_SBOX_ROW_SIZE 16
 #define MSG_SBOX_SELECTION_SIZE 4
+#define MSG_P_PERMUT_SIZE 4
 
 //#define LOG_KEY_DETAILS
 //#define LOG_KEY_CD_DETAILS
@@ -813,6 +814,63 @@ static uint8_t msg_b_col_num(uint8_t six_bit_byte)
   return (uint8_t)six_bit_byte >> 1 & 0x0f;
 }
 
+static void msg_p_permut(const uint8_t * const sbox_result, uint8_t *ret)
+{
+
+  /*
+   
+    16   7  20  21
+    29  12  28  17
+    1  15  23  26
+    5  18  31  10
+    2   8  24  14
+    32  27   3   9
+    19  13  30   6
+    22  11   4  25
+  
+  */
+  
+  ret[0] |= sbox_result[GET_BYTE_IDX(16)] << 7 & 0x80;
+  ret[0] |= sbox_result[GET_BYTE_IDX(7) ] << 5 & 0x40;
+  ret[0] |= sbox_result[GET_BYTE_IDX(20)] << 1 & 0x20;
+  ret[0] |= sbox_result[GET_BYTE_IDX(21)] << 1 & 0x10;
+
+  ret[0] |= sbox_result[GET_BYTE_IDX(29)]      & 0x08;
+  ret[0] |= sbox_result[GET_BYTE_IDX(12)] >> 2 & 0x04;
+  ret[0] |= sbox_result[GET_BYTE_IDX(28)] >> 3 & 0x02;
+  ret[0] |= sbox_result[GET_BYTE_IDX(17)] >> 7 & 0x01;
+
+  ret[1] |= sbox_result[GET_BYTE_IDX(1) ]      & 0x80;
+  ret[1] |= sbox_result[GET_BYTE_IDX(15)] << 5 & 0x40;
+  ret[1] |= sbox_result[GET_BYTE_IDX(23)] << 4 & 0x20;
+  ret[1] |= sbox_result[GET_BYTE_IDX(26)] >> 2 & 0x10;
+
+  ret[1] |= sbox_result[GET_BYTE_IDX(5) ]      & 0x08;
+  ret[1] |= sbox_result[GET_BYTE_IDX(18)] >> 4 & 0x04;
+  ret[1] |= sbox_result[GET_BYTE_IDX(31)]      & 0x02;
+  ret[1] |= sbox_result[GET_BYTE_IDX(10)] >> 5 & 0x01;
+
+  ret[2] |= sbox_result[GET_BYTE_IDX(2) ] << 1 & 0x80;
+  ret[2] |= sbox_result[GET_BYTE_IDX(8) ] << 6 & 0x40;
+  ret[2] |= sbox_result[GET_BYTE_IDX(24)] << 5 & 0x20;
+  ret[2] |= sbox_result[GET_BYTE_IDX(14)] << 4 & 0x10;
+
+  ret[2] |= sbox_result[GET_BYTE_IDX(32)] << 3 & 0x08;
+  ret[2] |= sbox_result[GET_BYTE_IDX(27)] >> 3 & 0x04;
+  ret[2] |= sbox_result[GET_BYTE_IDX(3) ] >> 4 & 0x02;
+  ret[2] |= sbox_result[GET_BYTE_IDX(9) ] >> 7 & 0x01;
+
+  ret[3] |= sbox_result[GET_BYTE_IDX(19)] << 2 & 0x80;
+  ret[3] |= sbox_result[GET_BYTE_IDX(13)] << 3 & 0x40;
+  ret[3] |= sbox_result[GET_BYTE_IDX(30)] << 3 & 0x20;
+  ret[3] |= sbox_result[GET_BYTE_IDX(6) ] << 2 & 0x10;
+
+  ret[3] |= sbox_result[GET_BYTE_IDX(22)] << 1 & 0x08;
+  ret[3] |= sbox_result[GET_BYTE_IDX(11)] >> 1 & 0x04;
+  ret[3] |= sbox_result[GET_BYTE_IDX(4) ] >> 3 & 0x02;
+  ret[3] |= sbox_result[GET_BYTE_IDX(25)] >> 7 & 0x01;
+}
+
 static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
 {
   uint8_t e_bit[MSG_E_BIT_SIZE] = {0};
@@ -853,6 +911,9 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
 
   }
 
+  uint8_t p_permut[MSG_P_PERMUT_SIZE] = {0};
+  msg_p_permut(sbox_selection, p_permut);
+
 #ifdef LOG_MSG_LR_DETAILS
   const size_t num = key_rot.it - 1;
   char title_str[10 + 1] = {0};
@@ -868,6 +929,7 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
   print_bin_with_title(title_str, b_indices, MSG_B_INDICES_SIZE, 8, 0);
 
   print_bin_with_title("S(B) =", sbox_selection, MSG_SBOX_SELECTION_SIZE, 4, 0);
+  print_bin_with_title("P(S) =", p_permut, MSG_P_PERMUT_SIZE, 4, 0);
 #endif
 }
 
