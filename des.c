@@ -608,6 +608,59 @@ static void msg_ip(const uint8_t * const buffer, uint8_t *ret)
   ret[7] |= buffer[GET_BYTE_IDX(7) ] >> 1 & 0x01;
 }
 
+static void msg_ip_reverse(const uint8_t * const final_RL, uint8_t *msg_rev_IP)
+{
+  /*
+   *
+    40   8   48    16    56   24    64   32
+    39   7   47    15    55   23    63   31
+    38   6   46    14    54   22    62   30
+    37   5   45    13    53   21    61   29
+    36   4   44    12    52   20    60   28
+    35   3   43    11    51   19    59   27
+    34   2   42    10    50   18    58   26
+    33   1   41     9    49   17    57   25
+   *
+   */
+
+  msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(40)] << 7 & 0x80;
+  msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(39)] << 6 & 0x80;
+  msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(38)] << 5 & 0x80;
+  msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(37)] << 4 & 0x80;
+  msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(36)] << 3 & 0x80;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(35)] << 2 & 0x80;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(34)] << 1 & 0x80;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(33)]      & 0x80;
+
+  msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(8) ] << 6 & 0x40;
+  msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(7) ] << 5 & 0x40;
+  msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(6) ] << 4 & 0x40;
+  msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(5) ] << 3 & 0x40;
+  msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(4) ] << 2 & 0x40;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(3) ] << 1 & 0x40;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(2) ]      & 0x40;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(1) ] >> 1 & 0x40;
+
+  msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(48)] << 5 & 0x20;
+  msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(47)] << 4 & 0x20;
+  msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(46)] << 3 & 0x20;
+  msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(45)] << 2 & 0x20;
+  msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(44)] << 1 & 0x20;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(43)]      & 0x20;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(42)] >> 1 & 0x20;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(41)] >> 2 & 0x20;
+
+  msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(16)] << 4 & 0x10;
+  msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(15)] << 3 & 0x10;
+  msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(14)] << 2 & 0x10;
+  msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(13)] << 1 & 0x10;
+  msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(12)]      & 0x10;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(13)] >> 1 & 0x10;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(12)] >> 2 & 0x10;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(11)] >> 3 & 0x10;
+
+}
+
 static void msg_get_LR(const uint8_t * const ipbuffer, uint8_t *retL, uint8_t *retR)
 {
   memcpy(retL, ipbuffer, MSG_LR_SIZE);
@@ -963,10 +1016,10 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
 #endif
 }
 
-static void msg_combine_final_LR(const uint8_t * const L, const uint8_t * const R, uint8_t *final_LR)
+static void msg_combine_final_RL(const uint8_t * const L, const uint8_t * const R, uint8_t *final_RL)
 {
-  memcpy(final_LR, R, MSG_LR_SIZE);
-  memcpy(final_LR + MSG_LR_SIZE, L, MSG_LR_SIZE);
+  memcpy(final_RL, R, MSG_LR_SIZE);
+  memcpy(final_RL + MSG_LR_SIZE, L, MSG_LR_SIZE);
 }
 
 int main(int argc, char **argv)
@@ -1075,12 +1128,15 @@ int main(int argc, char **argv)
 #endif
   }
 
-  uint8_t final_LR[MSG_SINGLE_BLOCK_SIZE] = {0};
-  msg_combine_final_LR(L, R, final_LR);
+  uint8_t final_RL[MSG_SINGLE_BLOCK_SIZE] = {0};
+  msg_combine_final_RL(L, R, final_RL);
+
+  uint8_t msg_rev_IP[MSG_SINGLE_BLOCK_SIZE] = {0};
+  msg_ip_reverse(final_RL, msg_rev_IP);
 
 #ifdef LOG_MSG_LR_DETAILS
-  printf("\n");
-  print_bin_8bit("R16L16 =", final_LR, MSG_SINGLE_BLOCK_SIZE);
+  print_bin_8bit("R16L16 =", final_RL, MSG_SINGLE_BLOCK_SIZE);
+  print_bin_8bit("IP-1 =", msg_rev_IP, MSG_SINGLE_BLOCK_SIZE);
 #endif
 
 msg_end:
