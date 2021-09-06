@@ -659,6 +659,41 @@ static void msg_ip_reverse(const uint8_t * const final_RL, uint8_t *msg_rev_IP)
   msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(12)] >> 2 & 0x10;
   msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(11)] >> 3 & 0x10;
 
+  msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(56)] << 3 & 0x08;
+  msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(55)] << 2 & 0x08;
+  msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(54)] << 1 & 0x08;
+  msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(53)]      & 0x08;
+  msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(52)] >> 1 & 0x08;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(51)] >> 2 & 0x08;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(50)] >> 3 & 0x08;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(49)] >> 4 & 0x08;
+
+  msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(24)] << 2 & 0x04;
+  msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(23)] << 1 & 0x04;
+  msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(22)]      & 0x04;
+  msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(21)] >> 1 & 0x04;
+  msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(20)] >> 2 & 0x04;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(19)] >> 3 & 0x04;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(18)] >> 4 & 0x04;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(17)] >> 5 & 0x04;
+
+  msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(64)] << 1 & 0x02;
+  msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(63)]      & 0x02;
+  msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(62)] >> 1 & 0x02;
+  msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(61)] >> 2 & 0x02;
+  msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(60)] >> 3 & 0x02;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(59)] >> 4 & 0x02;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(58)] >> 5 & 0x02;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(57)] >> 6 & 0x02;
+
+  msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(32)]      & 0x01;
+  msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(31)] >> 1 & 0x01;
+  msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(30)] >> 2 & 0x01;
+  msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(29)] >> 3 & 0x01;
+  msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(28)] >> 4 & 0x01;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(27)] >> 5 & 0x01;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(26)] >> 6 & 0x01;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(25)] >> 7 & 0x01;
 }
 
 static void msg_get_LR(const uint8_t * const ipbuffer, uint8_t *retL, uint8_t *retR)
