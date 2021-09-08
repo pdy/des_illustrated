@@ -64,6 +64,12 @@ void print_buffer(const char * const buffer, unsigned long size);
 void print_as_hexstr(const uint8_t * const buffer, size_t size);
 void print_as_hexstr_with_title(const char *title, const uint8_t * const buffer, size_t size);
 
+enum encrypt_decrypt
+{
+  encrypt = 0,
+  decrypt
+};
+
 typedef struct key_rotation_t
 {
   uint8_t *subkeys;
@@ -1058,6 +1064,64 @@ static void msg_combine_final_RL(const uint8_t * const L, const uint8_t * const 
   memcpy(final_RL + MSG_LR_SIZE, L, MSG_LR_SIZE);
 }
 
+static void msg_single_block(const uint8_t * const msg_single_block, key_rotation_t key_rot, enum encrypt_decrypt op, uint8_t *out_single_block)
+{
+  uint8_t msg_ip_buff[MSG_IP_SIZE] = {0};
+  msg_ip(msg_single_block, msg_ip_buff);
+
+  uint8_t L[MSG_LR_SIZE] = {0}, R[MSG_LR_SIZE] = {0};
+  msg_get_LR(msg_ip_buff, L, R);
+
+#ifdef LOG_MSG_DETAILS
+  print_as_hexstr_with_title("M  = ", msg_single_block, MSG_SINGLE_BLOCK_SIZE);
+  print_bin_with_title("M  = ", msg_single_block, MSG_SINGLE_BLOCK_SIZE, 4, 0);
+  print_bin_with_title("IP = ", msg_ip_buff, MSG_IP_SIZE, 4, 0);
+#endif
+
+#ifdef LOG_MSG_LR_INTERNAL_DETAILS 
+  print_bin_with_title("L0 = ", L, MSG_LR_SIZE, 4, 0); 
+  print_bin_with_title("R0 = ", R, MSG_LR_SIZE, 4, 0);
+  printf("\n"); 
+#endif
+
+  uint8_t Rn[MSG_LR_SIZE] = {0};
+  for(size_t i=1; i <= 16; ++i)
+  {
+    msg_calc_Rn(L, R, key_get_iteration(key_rot, i), Rn);
+
+    msg_copy_LR(R, L);
+    msg_copy_LR(Rn, R);
+
+#ifdef LOG_MSG_LR_INTERNAL_DETAILS
+    char title_str[10 + 1] = {0};
+    sprintf(title_str, "L%zu = ", i);
+    print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
+   
+    memset(title_str, 0x00, 10 + 1);
+    sprintf(title_str, "R%zu = ", i);
+    print_bin_with_title(title_str, R, MSG_LR_SIZE, 4, 0);
+
+    printf("\n");
+#endif
+  }
+
+  uint8_t final_RL[MSG_SINGLE_BLOCK_SIZE] = {0};
+  msg_combine_final_RL(L, R, final_RL);
+
+  msg_ip_reverse(final_RL, out_single_block);
+
+#ifdef LOG_MSG_LR_DETAILS
+  print_bin_8bit("R16L16 = ", final_RL, MSG_SINGLE_BLOCK_SIZE);
+#endif
+
+#ifdef LOG_MSG_DETAILS
+  print_bin_8bit("IP-1 = ", out_single_block, MSG_SINGLE_BLOCK_SIZE); 
+  print_as_hexstr_with_title("Cipher = ", out_single_block, MSG_SINGLE_BLOCK_SIZE);
+  printf("\n");
+#endif
+
+}
+
 int main(int argc, char **argv)
 {
   if(argc != 3)
@@ -1119,61 +1183,10 @@ int main(int argc, char **argv)
     printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
     goto msg_end;
   }  
- 
-  uint8_t msg_ip_buff[MSG_IP_SIZE] = {0};
-  msg_ip(msg_file_buffer, msg_ip_buff);
 
-  uint8_t L[MSG_LR_SIZE] = {0}, R[MSG_LR_SIZE] = {0};
-  msg_get_LR(msg_ip_buff, L, R);
-
-#ifdef LOG_MSG_DETAILS
-  print_as_hexstr_with_title("M  = ", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE);
-  print_bin_with_title("M  = ", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE, 4, 0);
-  print_bin_with_title("IP = ", msg_ip_buff, MSG_IP_SIZE, 4, 0);
-#endif
-
-#ifdef LOG_MSG_LR_INTERNAL_DETAILS 
-  print_bin_with_title("L0 = ", L, MSG_LR_SIZE, 4, 0); 
-  print_bin_with_title("R0 = ", R, MSG_LR_SIZE, 4, 0);
-  printf("\n"); 
-#endif
-
-  uint8_t Rn[MSG_LR_SIZE] = {0};
-  for(size_t i=1; i <= 16; ++i)
-  {
-    msg_calc_Rn(L, R, key_get_iteration(key_rot, i), Rn);
-
-    msg_copy_LR(R, L);
-    msg_copy_LR(Rn, R);
-
-#ifdef LOG_MSG_LR_INTERNAL_DETAILS
-    char title_str[10 + 1] = {0};
-    sprintf(title_str, "L%zu = ", i);
-    print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
-   
-    memset(title_str, 0x00, 10 + 1);
-    sprintf(title_str, "R%zu = ", i);
-    print_bin_with_title(title_str, R, MSG_LR_SIZE, 4, 0);
-
-    printf("\n");
-#endif
-  }
-
-  uint8_t final_RL[MSG_SINGLE_BLOCK_SIZE] = {0};
-  msg_combine_final_RL(L, R, final_RL);
-
-  uint8_t msg_rev_IP[MSG_SINGLE_BLOCK_SIZE] = {0};
-  msg_ip_reverse(final_RL, msg_rev_IP);
-
-#ifdef LOG_MSG_LR_DETAILS
-  print_bin_8bit("R16L16 = ", final_RL, MSG_SINGLE_BLOCK_SIZE);
-#endif
-
-#ifdef LOG_MSG_DETAILS
-  print_bin_8bit("IP-1 = ", msg_rev_IP, MSG_SINGLE_BLOCK_SIZE); 
-  print_as_hexstr_with_title("Cipher = ", msg_rev_IP, MSG_SINGLE_BLOCK_SIZE);
-  printf("\n");
-#endif
+  enum encrypt_decrypt op = encrypt; 
+  uint8_t cipher[MSG_SINGLE_BLOCK_SIZE] = {0};
+  msg_single_block(msg_file_buffer, key_rot, op, cipher);
 
 msg_end:
   free_key_rot(key_rot);
