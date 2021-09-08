@@ -48,10 +48,10 @@
 #define MSG_P_PERMUT_SIZE 4
 
 #define LOG_KEY_DETAILS
-//#define LOG_KEY_CD_DETAILS
-//#define LOG_MSG_DETAILS
-#define LOG_MSG_LR_DETAILS
-#define LOG_MSG_LR_INTERNAL_DETAILS
+// #define LOG_KEY_CD_DETAILS
+#define LOG_MSG_DETAILS
+//#define LOG_MSG_LR_DETAILS
+//#define LOG_MSG_LR_INTERNAL_DETAILS
 
 #define GET_BYTE_IDX(bit_idx) ((size_t)(bit_idx - 1) / 8)
 
@@ -62,6 +62,7 @@ void print_bin_bits(const char *title, const uint8_t * const buffer, size_t size
 void print_bin_8bit(const char *title, const uint8_t * const buffer, size_t size);
 void print_buffer(const char * const buffer, unsigned long size);
 void print_as_hexstr(const uint8_t * const buffer, size_t size);
+void print_as_hexstr_with_title(const char *title, const uint8_t * const buffer, size_t size);
 
 typedef struct key_rotation_t
 {
@@ -127,7 +128,7 @@ static void key_rotation_print(const key_rotation_t key_rot)
   char title_str[10 + 1] = {0};
   for(; key_is_iterator_valid(it); ++idx, it = key_get_iteration(key_rot, idx))
   {
-    sprintf(title_str, "K%lu =", idx);
+    sprintf(title_str, "K%lu = ", idx);
     print_bin_with_title(title_str, it.ptr, it.size, 6, 0);
     memset(title_str, 0x00, sizeof title_str);
   }
@@ -448,8 +449,8 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
   };
 
 #ifdef LOG_KEY_CD_DETAILS
-  print_bin_with_title("C0 =", c_i, 4, 7, 4);
-  print_bin_with_title("D0 =", d_i, 4, 7, 4);
+  print_bin_with_title("C0 = ", c_i, 4, 7, 4);
+  print_bin_with_title("D0 = ", d_i, 4, 7, 4);
 #endif
 
   key_rotation_t ret_subkeys = init_key_rot();
@@ -477,12 +478,12 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 
 #ifdef LOG_KEY_CD_DETAILS
     char title_str[10 + 1] = {0};
-    sprintf(title_str, "C%lu =", i);
+    sprintf(title_str, "C%lu = ", i);
     print_bin_simple(title_str, c_i, 4);
     
     memset(title_str, 0x00, sizeof title_str);
 
-    sprintf(title_str, "D%lu =", i);
+    sprintf(title_str, "D%lu = ", i);
     print_bin_simple(title_str, d_i, 4);
 #endif
 
@@ -501,7 +502,7 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
     };
 
 #ifdef LOG_KEY_CD_DETAILS
-    print_bin_bits("CD =", cd, 7, 7);
+    print_bin_bits("CD = ", cd, 7, 7);
 #endif
 
     uint8_t K_pc2[KEY_PC2_SIZE] = {0};
@@ -509,7 +510,7 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 
 #if 0
 #ifdef LOG_KEY_DETAILS
-    sprintf(title_str, "K%lu =", i);
+    sprintf(title_str, "K%lu = ", i);
     print_bin_bits(title_str, K_pc2, KEY_PC2_SIZE, 6);
     memset(title_str, 0x00, sizeof title_str);
 #endif
@@ -1035,19 +1036,19 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_ro
 #ifdef LOG_MSG_LR_INTERNAL_DETAILS
   const size_t num = key_rot.it;
   char title_str[10 + 1] = {0};
-  sprintf(title_str, "E%zu =", num);
+  sprintf(title_str, "E%zu = ", num);
   print_bin_with_title(title_str, e_bit, MSG_E_BIT_SIZE, 6, 0);
 
   memset(title_str, 0x00, 10 + 1);
-  sprintf(title_str, "K%zuE%zu =", key_rot.it, num);
+  sprintf(title_str, "K%zuE%zu = ", key_rot.it, num);
   print_bin_with_title(title_str, e_bit_key_xored, MSG_E_BIT_SIZE, 6, 0);
 
   memset(title_str, 0x00, 10 + 1);
-  sprintf(title_str, "B%zu =", key_rot.it);
+  sprintf(title_str, "B%zu = ", key_rot.it);
   print_bin_with_title(title_str, b_indices, MSG_B_INDICES_SIZE, 8, 0);
 
-  print_bin_with_title("S(B) =", sbox_selection, MSG_SBOX_SELECTION_SIZE, 4, 0);
-  print_bin_with_title("P(S) =", p_permut, MSG_P_PERMUT_SIZE, 4, 0);
+  print_bin_with_title("S(B) = ", sbox_selection, MSG_SBOX_SELECTION_SIZE, 4, 0);
+  print_bin_with_title("P(S) = ", p_permut, MSG_P_PERMUT_SIZE, 4, 0);
 #endif
 }
 
@@ -1086,7 +1087,6 @@ int main(int argc, char **argv)
     goto key_end;
   }
 
-  //print_buffer(key_file_buffer, key_file_size);
 
   uint8_t key_bytes[KEY_SIZE] = {0};
   hex_str_to_bytes(key_file_buffer, KEY_HEXSTR_LEN, key_bytes);
@@ -1102,11 +1102,12 @@ int main(int argc, char **argv)
   }
 
 #ifdef LOG_KEY_DETAILS
-  //print_as_hexstr(key_bytes, sizeof key_bytes);
-  print_bin_8bit("K =", key_bytes, KEY_SIZE);
-  print_bin_bits("K PC1 =", key_pc1_bytes, KEY_PC1_SIZE, 7);
+  print_as_hexstr_with_title("K = ", key_bytes, KEY_SIZE);
+  print_bin_8bit("K = ", key_bytes, KEY_SIZE);
+  print_bin_bits("K PC1 = ", key_pc1_bytes, KEY_PC1_SIZE, 7);
 
   key_rotation_print(key_rot);
+  printf("\n");
 #endif
   
   // single block msg handling
@@ -1119,44 +1120,39 @@ int main(int argc, char **argv)
     goto msg_end;
   }  
  
-  //printf("MSG ");
-  //print_as_hexstr(msg_file_buffer, msg_file_size);
-
-  
   uint8_t msg_ip_buff[MSG_IP_SIZE] = {0};
   msg_ip(msg_file_buffer, msg_ip_buff);
 
   uint8_t L[MSG_LR_SIZE] = {0}, R[MSG_LR_SIZE] = {0};
   msg_get_LR(msg_ip_buff, L, R);
 
-#ifdef LOG_MSG_LR_DETAILS
-  print_bin_with_title("M  =", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE, 4, 0);
-  print_bin_with_title("IP =", msg_ip_buff, MSG_IP_SIZE, 4, 0);
-  print_bin_with_title("L0 =", L, MSG_LR_SIZE, 4, 0); 
-  print_bin_with_title("R0 =", R, MSG_LR_SIZE, 4, 0);
+#ifdef LOG_MSG_DETAILS
+  print_as_hexstr_with_title("M  = ", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE);
+  print_bin_with_title("M  = ", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE, 4, 0);
+  print_bin_with_title("IP = ", msg_ip_buff, MSG_IP_SIZE, 4, 0);
+#endif
+
+#ifdef LOG_MSG_LR_INTERNAL_DETAILS 
+  print_bin_with_title("L0 = ", L, MSG_LR_SIZE, 4, 0); 
+  print_bin_with_title("R0 = ", R, MSG_LR_SIZE, 4, 0);
   printf("\n"); 
 #endif
 
   uint8_t Rn[MSG_LR_SIZE] = {0};
-  //uint8_t Ln[MSG_LR_SIZE] = {0};
   for(size_t i=1; i <= 16; ++i)
   {
-    //memset(Rn, 0x00, MSG_LR_SIZE);    
-    //memset(Ln, 0x00, MSG_LR_SIZE);    
-   
-    //msg_copy_LR(R, Ln);
     msg_calc_Rn(L, R, key_get_iteration(key_rot, i), Rn);
 
     msg_copy_LR(R, L);
     msg_copy_LR(Rn, R);
 
-#ifdef LOG_MSG_LR_DETAILS
+#ifdef LOG_MSG_LR_INTERNAL_DETAILS
     char title_str[10 + 1] = {0};
-    //sprintf(title_str, "L%zu =", i);
-    //print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
+    sprintf(title_str, "L%zu = ", i);
+    print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
    
     memset(title_str, 0x00, 10 + 1);
-    sprintf(title_str, "R%zu =", i);
+    sprintf(title_str, "R%zu = ", i);
     print_bin_with_title(title_str, R, MSG_LR_SIZE, 4, 0);
 
     printf("\n");
@@ -1170,8 +1166,13 @@ int main(int argc, char **argv)
   msg_ip_reverse(final_RL, msg_rev_IP);
 
 #ifdef LOG_MSG_LR_DETAILS
-  print_bin_8bit("R16L16 =", final_RL, MSG_SINGLE_BLOCK_SIZE);
-  print_bin_8bit("IP-1 =", msg_rev_IP, MSG_SINGLE_BLOCK_SIZE);
+  print_bin_8bit("R16L16 = ", final_RL, MSG_SINGLE_BLOCK_SIZE);
+#endif
+
+#ifdef LOG_MSG_DETAILS
+  print_bin_8bit("IP-1 = ", msg_rev_IP, MSG_SINGLE_BLOCK_SIZE); 
+  print_as_hexstr_with_title("Cipher = ", msg_rev_IP, MSG_SINGLE_BLOCK_SIZE);
+  printf("\n");
 #endif
 
 msg_end:
@@ -1226,7 +1227,7 @@ void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word
 
 void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
 {
-  printf("%s ", title);
+  printf("%s", title);
   print_bin_detail(buffer, size, bit_word_len, skip_beg);
 }
 
@@ -1256,7 +1257,13 @@ void print_buffer(const char * const buffer, unsigned long size)
 void print_as_hexstr(const uint8_t * const buffer, size_t size)
 {
   for(size_t i = 0; i < size; ++i)
-    printf("%2x ", buffer[i]);
+    printf("%02x ", buffer[i]);
 
   printf("\n");
+}
+
+void print_as_hexstr_with_title(const char *title, const uint8_t * const buffer, size_t size)
+{
+  printf("%s", title);
+  print_as_hexstr(buffer, size);
 }
