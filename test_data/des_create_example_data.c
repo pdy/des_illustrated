@@ -31,36 +31,42 @@ int main(void)
 {
   const char *data_filename[] =
   {
-    "data_1.bin"
+    "data_1.bin",
+    "data_2.bin"
   };
 
   const char *key_filename[] =
   {
-    "hex_key_1.txt"
+    "hex_key_1.txt",
+    "hex_key_2.txt"
   };
 
   const char *cipher_filename[] = 
   {
-    "cipher_1.bin"
+    "cipher_1.bin",
+    "cipher_2.bin"
   };
 
   const char *key[] =
   {
-    "133457799BBCDFF1"
+    "133457799BBCDFF1",
+    "0E329232EA6D0D73"
   };
   
-  const unsigned char data[1][8] = 
+  const unsigned char data[2][8] = 
   { 
-    { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef }
+    { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef },
+    { 0x87, 0x87, 0x87, 0x87, 0x87, 0x87, 0x87, 0x87 }
   };
 
-  const unsigned char cipher[1][8] = 
+  const unsigned char cipher[2][8] = 
   { 
-    { 0x85, 0xe8, 0x13, 0x54, 0x0f, 0x0a, 0xb4, 0x05 }
+    { 0x85, 0xe8, 0x13, 0x54, 0x0f, 0x0a, 0xb4, 0x05 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
   };
 
 
-  for(size_t i = 0; i < 1; ++i)
+  for(size_t i = 0; i < 2; ++i)
   {
     FILE *data_file = fopen(data_filename[i], "wb");
     if(!data_file)
