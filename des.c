@@ -115,6 +115,38 @@ static key_rotation_iterator_t key_get_iteration(key_rotation_t key_rot, size_t 
   return it;
 }
 
+static key_rotation_iterator_t key_get_reverse_iteration(key_rotation_t key_rot, size_t iteration)
+{
+  if(!iteration || iteration > KEY_SUBKEYS_NUM)
+  {
+    const key_rotation_iterator_t ret = { .ptr = NULL, .size = 0, .it = 0};
+    return ret;
+  }
+
+  const size_t idx = (size_t)KEY_SUBKEYS_NUM - iteration;
+
+  const key_rotation_iterator_t it = 
+  {
+    .ptr = key_rot.subkeys + (idx * KEY_ITER_SIZE),
+    .size = KEY_ITER_SIZE,
+    .it = idx + 1
+  };
+
+  return it;
+}
+
+typedef key_rotation_iterator_t(*key_get_iterator)(key_rotation_t, size_t);
+
+static key_get_iterator key_get_iterator_function(enum encrypt_decrypt op)
+{
+  if(op == encrypt)
+    return key_get_iteration;
+  else if(op == decrypt)
+    return key_get_reverse_iteration;
+
+  return NULL;
+}
+
 static int key_is_iterator_valid(key_rotation_iterator_t it)
 {
   return it.ptr != NULL && it.size == KEY_ITER_SIZE;
@@ -142,7 +174,7 @@ static void key_rotation_print(const key_rotation_t key_rot)
 
 static void usage(void)
 {
-  printf("c99_practice <file_with_hex_str_key> <binary_file>\n");
+  printf("des_illustrated <e/d - encrypt or decrypt> <file_with_hex_str_key> <binary_file>\n");
 }
 
 static long get_file_size(FILE *file)
@@ -1084,10 +1116,12 @@ static void msg_single_block(const uint8_t * const msg_single_block, key_rotatio
   printf("\n"); 
 #endif
 
+  key_get_iterator key_iterator = key_get_iterator_function(op);
+  
   uint8_t Rn[MSG_LR_SIZE] = {0};
   for(size_t i=1; i <= 16; ++i)
   {
-    msg_calc_Rn(L, R, key_get_iteration(key_rot, i), Rn);
+    msg_calc_Rn(L, R, key_iterator(key_rot, i), Rn);
 
     msg_copy_LR(R, L);
     msg_copy_LR(Rn, R);
@@ -1124,14 +1158,30 @@ static void msg_single_block(const uint8_t * const msg_single_block, key_rotatio
 
 int main(int argc, char **argv)
 {
-  if(argc != 3)
+  if(argc != 4)
   {
     usage();
     return 0;
   }
- 
+
+  enum encrypt_decrypt op;
+  {
+    if(strcmp(argv[1], "e") == 0)
+      op = encrypt;
+    else if(strcmp(argv[1], "d") == 0)
+      op = decrypt;
+    else
+    {
+      usage();
+      return 0;
+    }
+  }
+
+  const char *key_filename = argv[2];
+  const char *data_filename = argv[3];
+
   char *key_file_buffer = NULL;
-  const unsigned long key_file_size = read_whole_file(argv[1], &key_file_buffer);
+  const unsigned long key_file_size = read_whole_file(key_filename, &key_file_buffer);
   if(!key_file_size || !key_file_buffer)
   {
     printf("Err readng key file size %lu\n", key_file_size);
@@ -1147,7 +1197,7 @@ int main(int argc, char **argv)
 
   if(!is_valid_hex_str(key_file_buffer, KEY_HEXSTR_LEN))
   {
-    printf("%s does not contain valid hex str\n", argv[1]);
+    printf("%s does not contain valid hex str\n", key_filename);
     goto key_end;
   }
 
@@ -1177,14 +1227,13 @@ int main(int argc, char **argv)
   // single block msg handling
   
   uint8_t *msg_file_buffer = NULL;
-  const unsigned long msg_file_size = read_whole_file(argv[2], (char**)&msg_file_buffer);
+  const unsigned long msg_file_size = read_whole_file(data_filename, (char**)&msg_file_buffer);
   if(msg_file_size != MSG_SINGLE_BLOCK_SIZE)
   {
     printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
     goto msg_end;
   }  
 
-  enum encrypt_decrypt op = encrypt; 
   uint8_t cipher[MSG_SINGLE_BLOCK_SIZE] = {0};
   msg_single_block(msg_file_buffer, key_rot, op, cipher);
 
