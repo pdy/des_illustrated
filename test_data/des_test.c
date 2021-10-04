@@ -26,6 +26,37 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+#include <unistd.h>
+
+static long get_file_size(FILE *file)
+{
+  fseek(file, 0, SEEK_END);
+  const long ret = ftell(file);
+  fseek(file, 0, SEEK_SET); 
+
+  return ret;
+}
+
+static unsigned long read_whole_file(const char * const filename, char **ret)
+{
+  FILE *file = fopen(filename, "r");
+  if(!file)
+    return 0;
+
+  const long file_size = get_file_size(file);
+  *ret = (char*)malloc(sizeof(char) * (unsigned long)file_size);
+  if(!ret)
+    return 0;
+
+  const unsigned long actual_size = fread(*ret, 1, (unsigned long)file_size, file);
+  printf("%s read size %lu buff size %lu\n", filename, actual_size, file_size); 
+  fclose(file);
+
+//  ret = buffer;
+  return actual_size;
+}
 
 int main(int argc, char **argv)
 {
@@ -74,47 +105,41 @@ int main(int argc, char **argv)
   const char *des_bin_path = argv[1];
   const char *tmp_bin_file_path = "./tmp_file.bin";
 
+  char encrypt_cmd[10240] = {0};
+  char decrypt_cmd[10240] = {0};
   for(size_t i = 0; i < 2; ++i)
-  {
-    FILE *data_file = fopen(data_filename[i], "wb");
-    if(!data_file)
-    {
-      printf("%s: %s\n", "Can't open the data file", data_filename[i]);
-      return 0;
-    }
-
-    FILE *key_file = fopen(key_filename[i], "w");
-    if(!key_file)
-    {
-      printf("%s: %s\n", "Can't open the key file", key_filename[i]);
-      fclose(data_file);
-      return 0;
-    }
-
-    FILE *cipher_file = fopen(cipher_filename[i], "w");
-    if(!cipher_file)
-    {
-      printf("%s: %s\n", "Can't open the cipher file", cipher_filename[i]);
-      fclose(data_file);
-      fclose(key_file);
-      return 0;
-    }
+  { 
+    sprintf(encrypt_cmd, "%s e %s %s %s", argv[1], key_filename[i], data_filename[i], tmp_bin_file_path);
+    sprintf(decrypt_cmd, "%s d %s %s %s", argv[1], key_filename[i], tmp_bin_file_path, data_filename[i]);
   
-    FILE *tmp_bin_file = fopen(tmp_bin_file_path, "w");
-    if(!tmp_bin_file)
+    printf("\n\nEncrypt %s \n\n", encrypt_cmd);
+
+    system(encrypt_cmd);
+
+    char *file_content = NULL; 
+    const unsigned long bytes_read = read_whole_file(tmp_bin_file_path, &file_content);
+    if(!bytes_read)
     {
-      printf("%s: %s\n", "Can't open the tmp bin file", cipher_filename[i]);
-      fclose(data_file);
-      fclose(key_file);
-      fclose(cipher_file);
+      printf("Cant read from %s", tmp_bin_file_path);
       return 0;
+    } 
+
+    const unsigned char *correct_encrypt_result = cipher[i];
+    for(size_t j = 0; j < 8; ++j)
+    {
+      if(correct_encrypt_result[j] != (unsigned char)file_content[j])
+      {
+        printf("!!! ENCRYPTING FAILED !!!\n %s", data_filename[i]);
+        unlink(tmp_bin_file_path);
+        return 0;
+      }
     }
-     
-    fclose(data_file);
-    fclose(key_file);
-    fclose(cipher_file);
-    fclose(tmp_bin_file);
+
+    memset(encrypt_cmd, 0x00, 10240);
+    memset(decrypt_cmd, 0x00, 10240);
   }
-   
+  
+  unlink(tmp_bin_file_path);
+
   return 0;
 }
