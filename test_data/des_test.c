@@ -129,7 +129,7 @@ int main(int argc, char **argv)
     {
       if(correct_encrypt_result[j] != (unsigned char)file_content[j])
       {
-        printf("!!! ENCRYPTING FAILED !!!\n %s", data_filename[i]);
+        printf("\n\n!!! ENCRYPTING FAILED !!!\n %s\n\n", data_filename[i]);
         unlink(tmp_bin_file_path);
         return 0;
       }
