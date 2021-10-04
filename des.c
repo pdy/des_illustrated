@@ -174,7 +174,7 @@ static void key_rotation_print(const key_rotation_t key_rot)
 
 static void usage(void)
 {
-  printf("des_illustrated <e/d - encrypt or decrypt> <file_with_hex_str_key> <binary_file>\n");
+  printf("des_illustrated <e/d - encrypt or decrypt> <file_with_hex_str_key> <binary_file> <result_file - optional>\n");
 }
 
 static long get_file_size(FILE *file)
@@ -1158,7 +1158,7 @@ static void msg_single_block(const uint8_t * const msg_single_block, key_rotatio
 
 int main(int argc, char **argv)
 {
-  if(argc != 4)
+  if(argc < 4)
   {
     usage();
     return 0;
@@ -1236,6 +1236,20 @@ int main(int argc, char **argv)
 
   uint8_t cipher[MSG_SINGLE_BLOCK_SIZE] = {0};
   msg_single_block(msg_file_buffer, key_rot, op, cipher);
+
+  // result file handling
+  if(argc == 5 && argv[4])
+  {
+    FILE *result_file = fopen(argv[4], "w");
+    if(result_file)
+    {
+      const unsigned long result_file_written = fwrite(cipher, 1, MSG_SINGLE_BLOCK_SIZE, result_file);
+      printf("Written %lu bytes to %s\n", result_file_written, argv[4]);
+      fclose(result_file);
+    }
+    else
+      printf("Can't open result file %s", argv[4]);
+  }
 
 msg_end:
   free_key_rot(key_rot);
