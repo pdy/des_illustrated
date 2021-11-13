@@ -75,13 +75,13 @@ typedef struct key_rotation_t
   uint8_t *subkeys;
 } key_rotation_t;
 
-typedef struct key_rotation_iterator_t
+typedef struct key_subkey_t
 {
   uint8_t *ptr;
   size_t size;
   size_t it;
 
-} key_rotation_iterator_t;
+} key_subkey_t;
 
 static key_rotation_t init_key_rot()
 {
@@ -97,15 +97,15 @@ static void free_key_rot(key_rotation_t key_rot)
     free(key_rot.subkeys);
 }
 
-static key_rotation_iterator_t key_get_iteration(key_rotation_t key_rot, size_t iteration)
+static key_subkey_t key_get_subkey(key_rotation_t key_rot, size_t iteration)
 {
   if(!iteration || iteration > KEY_SUBKEYS_NUM)
   {
-    const key_rotation_iterator_t ret = { .ptr = NULL, .size = 0, .it = 0};
+    const key_subkey_t ret = { .ptr = NULL, .size = 0, .it = 0};
     return ret;
   }
 
-  const key_rotation_iterator_t it = 
+  const key_subkey_t it = 
   {
     .ptr = key_rot.subkeys + ((iteration - 1) * KEY_ITER_SIZE),
     .size = KEY_ITER_SIZE,
@@ -115,17 +115,17 @@ static key_rotation_iterator_t key_get_iteration(key_rotation_t key_rot, size_t 
   return it;
 }
 
-static key_rotation_iterator_t key_get_reverse_iteration(key_rotation_t key_rot, size_t iteration)
+static key_subkey_t key_get_subkey_reverse(key_rotation_t key_rot, size_t iteration)
 {
   if(!iteration || iteration > KEY_SUBKEYS_NUM)
   {
-    const key_rotation_iterator_t ret = { .ptr = NULL, .size = 0, .it = 0};
+    const key_subkey_t ret = { .ptr = NULL, .size = 0, .it = 0};
     return ret;
   }
 
   const size_t idx = (size_t)KEY_SUBKEYS_NUM - iteration;
 
-  const key_rotation_iterator_t it = 
+  const key_subkey_t it = 
   {
     .ptr = key_rot.subkeys + (idx * KEY_ITER_SIZE),
     .size = KEY_ITER_SIZE,
@@ -135,19 +135,19 @@ static key_rotation_iterator_t key_get_reverse_iteration(key_rotation_t key_rot,
   return it;
 }
 
-typedef key_rotation_iterator_t(*key_get_iterator)(key_rotation_t, size_t);
+typedef key_subkey_t(*key_get_iterator)(key_rotation_t, size_t);
 
 static key_get_iterator key_get_iterator_function(enum encrypt_decrypt op)
 {
   if(op == encrypt)
-    return key_get_iteration;
+    return key_get_subkey;
   else if(op == decrypt)
-    return key_get_reverse_iteration;
+    return key_get_subkey_reverse;
 
   return NULL;
 }
 
-static int key_is_iterator_valid(key_rotation_iterator_t it)
+static int key_is_iterator_valid(key_subkey_t it)
 {
   return it.ptr != NULL && it.size == KEY_ITER_SIZE;
 }
@@ -162,9 +162,9 @@ static void key_add_iteration(key_rotation_t key_rot, size_t iteration, uint8_t 
 static void key_rotation_print(const key_rotation_t key_rot)
 {
   size_t idx = 1;
-  key_rotation_iterator_t it = key_get_iteration(key_rot, idx);
+  key_subkey_t it = key_get_subkey(key_rot, idx);
   char title_str[10 + 1] = {0};
-  for(; key_is_iterator_valid(it); ++idx, it = key_get_iteration(key_rot, idx))
+  for(; key_is_iterator_valid(it); ++idx, it = key_get_subkey(key_rot, idx))
   {
     sprintf(title_str, "K%lu = ", idx);
     print_bin_with_title(title_str, it.ptr, it.size, 6, 0);
@@ -1025,7 +1025,7 @@ static void msg_p_permut(const uint8_t * const sbox_result, uint8_t *ret)
   ret[3] |= sbox_result[GET_BYTE_IDX(25)] >> 7 & 0x01;
 }
 
-static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
+static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_subkey_t key_rot, uint8_t *out_R)
 {
   uint8_t e_bit[MSG_E_BIT_SIZE] = {0};
   msg_ebit_selection(R, e_bit);
