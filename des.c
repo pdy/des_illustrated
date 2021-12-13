@@ -64,7 +64,7 @@ void print_buffer(const char * const buffer, unsigned long size);
 void print_as_hexstr(const uint8_t * const buffer, size_t size);
 void print_as_hexstr_with_title(const char *title, const uint8_t * const buffer, size_t size);
 
-enum encrypt_decrypt
+enum operation
 {
   encrypt = 0,
   decrypt
@@ -137,7 +137,7 @@ static key_subkey_t key_get_subkey_reverse(key_rotation_t key_rot, size_t iterat
 
 typedef key_subkey_t(*key_get_iterator)(key_rotation_t, size_t);
 
-static key_get_iterator key_get_iterator_function(enum encrypt_decrypt op)
+static key_get_iterator key_get_iterator_function(enum operation op)
 {
   if(op == encrypt)
     return key_get_subkey;
@@ -1096,7 +1096,7 @@ static void msg_combine_final_RL(const uint8_t * const L, const uint8_t * const 
   memcpy(final_RL + MSG_LR_SIZE, L, MSG_LR_SIZE);
 }
 
-static void msg_single_block(const uint8_t * const msg_single_block, key_rotation_t key_rot, enum encrypt_decrypt op, uint8_t *out_single_block)
+static void msg_single_block(const uint8_t * const msg_single_block, key_rotation_t key_rot, enum operation op, uint8_t *out_single_block)
 {
   uint8_t msg_ip_buff[MSG_IP_SIZE] = {0};
   msg_ip(msg_single_block, msg_ip_buff);
@@ -1164,7 +1164,7 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  enum encrypt_decrypt op;
+  enum operation op;
   {
     if(strcmp(argv[1], "e") == 0)
       op = encrypt;
