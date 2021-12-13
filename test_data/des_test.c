@@ -110,17 +110,18 @@ int main(int argc, char **argv)
   for(size_t i = 0; i < 2; ++i)
   { 
     sprintf(encrypt_cmd, "%s e %s %s %s", argv[1], key_filename[i], data_filename[i], tmp_bin_file_path);
-    sprintf(decrypt_cmd, "%s d %s %s %s", argv[1], key_filename[i], tmp_bin_file_path, data_filename[i]);
+    sprintf(decrypt_cmd, "%s d %s %s %s", argv[1], key_filename[i], cipher_filename[i], tmp_bin_file_path);
   
+    char *file_content = NULL; 
+    
     printf("\n\nEncrypt %s \n\n", encrypt_cmd);
 
     system(encrypt_cmd);
 
-    char *file_content = NULL; 
-    const unsigned long bytes_read = read_whole_file(tmp_bin_file_path, &file_content);
-    if(!bytes_read)
+    const unsigned long encrypt_bytes_read = read_whole_file(tmp_bin_file_path, &file_content);
+    if(!encrypt_bytes_read)
     {
-      printf("Cant read from %s", tmp_bin_file_path);
+      printf("Cant read from %s during ENCRYPT test\n", tmp_bin_file_path);
       return 0;
     } 
 
@@ -134,6 +135,32 @@ int main(int argc, char **argv)
         return 0;
       }
     }
+
+    free(file_content);
+
+    printf("\n\nDecrypt %s \n\n", decrypt_cmd);
+    
+    system(decrypt_cmd);
+
+    const unsigned long decrypt_bytes_read = read_whole_file(tmp_bin_file_path, &file_content);
+    if(!decrypt_bytes_read)
+    {
+      printf("Cant read from %s during DECRYPT test\n", tmp_bin_file_path);
+      return 0;
+    } 
+
+    const unsigned char *correct_decrypt_result = data[i];
+    for(size_t j = 0; j < 8; ++j)
+    {
+      if(correct_decrypt_result[j] != (unsigned char)file_content[j])
+      {
+        printf("\n\n!!! DECRYPTING FAILED !!!\n %s\n\n", cipher_filename[i]);
+        unlink(tmp_bin_file_path);
+        return 0;
+      }
+    }
+
+    free(file_content);
 
     memset(encrypt_cmd, 0x00, 10240);
     memset(decrypt_cmd, 0x00, 10240);
