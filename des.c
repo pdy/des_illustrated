@@ -253,14 +253,14 @@ static uint8_t hex_char_map(char chr)
 static void hex_str_to_bytes(const char * const buffer, unsigned long size, uint8_t *ret)
 {
   char byte[2] = {0};
-  size_t byteTbCnt = 0;
+  size_t half_byte_idx = 0;
 
   for(unsigned long i = 0; i < size; ++i)
   {
-    byte[byteTbCnt] = buffer[i];
-    if(byteTbCnt == 1)
+    byte[half_byte_idx] = buffer[i];
+    if(half_byte_idx == 1)
     {
-      byteTbCnt = 0;
+      half_byte_idx = 0;
 
       const uint8_t lsb = hex_char_map(byte[1]);
       const uint8_t msb = hex_char_map(byte[0]);
@@ -272,7 +272,7 @@ static void hex_str_to_bytes(const char * const buffer, unsigned long size, uint
       continue;
     }
 
-    byteTbCnt += 1;
+    half_byte_idx += 1;
   }
 }
 
