@@ -24,47 +24,44 @@
 
 */
 
-#include <stdio.h>
-#include <string.h>
+#ifndef PDY_DES_ILLUS_TEST_DATA_COMMON_H_
+#define PDY_DES_ILLUS_TEST_DATA_COMMON_H_
 
-#include "common.h"
-
-int main(void)
+const char *data_filename[] =
 {
-  for(size_t i = 0; i < 2; ++i)
-  {
-    FILE *data_file = fopen(data_filename[i], "wb");
-    if(!data_file)
-    {
-      printf("%s: %s\n", "Can't open the data file", data_filename[i]);
-      return 0;
-    }
+  "data_1.bin",
+  "data_2.bin"
+};
 
-    FILE *key_file = fopen(key_filename[i], "w");
-    if(!key_file)
-    {
-      printf("%s: %s\n", "Can't open the key file", key_filename[i]);
-      fclose(data_file);
-      return 0;
-    }
+const char *key_filename[] =
+{
+  "hex_key_1.txt",
+  "hex_key_2.txt"
+};
 
-    FILE *cipher_file = fopen(cipher_filename[i], "w");
-    if(!cipher_file)
-    {
-      printf("%s: %s\n", "Can't open the cipher file", cipher_filename[i]);
-      fclose(data_file);
-      fclose(key_file);
-      return 0;
-    }
+const char *cipher_filename[] = 
+{
+  "cipher_1.bin",
+  "cipher_2.bin"
+};
 
-    fwrite(data[i], 1, sizeof(data[i]), data_file);
-    fwrite(cipher[i], 1, sizeof(cipher[i]), cipher_file);
-    fprintf(key_file, "%s\n", key[i]);
+const char *key[] =
+{
+  "133457799BBCDFF1",
+  "0E329232EA6D0D73"
+};
 
-    fclose(data_file);
-    fclose(key_file);
-    fclose(cipher_file);
-  }
-   
-  return 0;
-}
+const unsigned char data[2][8] = 
+{ 
+  { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef },
+  { 0x87, 0x87, 0x87, 0x87, 0x87, 0x87, 0x87, 0x87 }
+};
+
+const unsigned char cipher[2][8] = 
+{ 
+  { 0x85, 0xe8, 0x13, 0x54, 0x0f, 0x0a, 0xb4, 0x05 },
+  { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+};
+
+#endif
+
