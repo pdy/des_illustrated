@@ -220,21 +220,21 @@ static app_arg arg_process(int argc, char **argv)
     {
       ++i;
       char *key_ptr = argv[i];
-      for(int idx = 0; key_ptr && i < INPUT_FILES_LEN; ++idx, ++key_ptr)
+      for(int idx = 0; key_ptr && *key_ptr && i < INPUT_FILES_LEN; ++idx, ++key_ptr)
         ret.key_file[idx] = *key_ptr;
     }
     else if(strcmp(param, "-f") == 0)
     {
       ++i;
       char *file_ptr = argv[i];
-      for(int idx = 0; file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
+      for(int idx = 0; file_ptr && *file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
         ret.data_file[idx] = *file_ptr;
     }
     else if(strcmp(param, "-o") == 0)
     {
       ++i;
       char *out_file_ptr = argv[i];
-      for(int idx = 0; out_file_ptr && i < INPUT_FILES_LEN; ++idx, ++out_file_ptr)
+      for(int idx = 0; out_file_ptr && *out_file_ptr && i < INPUT_FILES_LEN; ++idx, ++out_file_ptr)
         ret.output_file[idx] = *out_file_ptr;
     }
     else if(strcmp(param, "-q") == 0)
@@ -277,7 +277,13 @@ static int arg_valid(app_arg args)
 
 static void usage(void)
 {
-  des_printf("des_illustrated <e/d - encrypt or decrypt> <file_with_hex_str_key> <binary_file> <result_file - optional>\n");
+  des_printf("des_illustrated <-e or -d> -k<key file> -f<data file> [OPTIONS] \n\n");
+  des_printf("\t-e encrypt\n");
+  des_printf("\t-d decrypt\n");
+  des_printf("\t-k key file in hex string format\n");
+  des_printf("\t-f data file to encrypt/decrypt\n");
+  des_printf("\t-o <optional> output file to save the result\n");
+  des_printf("\t-q <optional> quite mode - no logs\n");
 }
 
 static long get_file_size(FILE *file)
@@ -1267,25 +1273,9 @@ int main(int argc, char **argv)
     usage();
     return 0;
   }
-
-  enum operation op;
-  {
-    if(strcmp(argv[1], "e") == 0)
-      op = encrypt;
-    else if(strcmp(argv[1], "d") == 0)
-      op = decrypt;
-    else
-    {
-      usage();
-      return 0;
-    }
-  }
-
-  const char *key_filename = argv[2];
-  const char *data_filename = argv[3];
-
+ 
   char *key_file_buffer = NULL;
-  const unsigned long key_file_size = read_whole_file(key_filename, &key_file_buffer);
+  const unsigned long key_file_size = read_whole_file(g_app_arg.key_file, &key_file_buffer);
   if(!key_file_size || !key_file_buffer)
   {
     des_printf("Err readng key file size %lu\n", key_file_size);
@@ -1301,7 +1291,7 @@ int main(int argc, char **argv)
 
   if(!is_valid_hex_str(key_file_buffer, KEY_HEXSTR_LEN))
   {
-    des_printf("%s does not contain valid hex str\n", key_filename);
+    des_printf("%s does not contain valid hex str\n", g_app_arg.key_file);
     goto key_end;
   }
 
@@ -1331,7 +1321,7 @@ int main(int argc, char **argv)
   // single block msg handling
   
   uint8_t *msg_file_buffer = NULL;
-  const unsigned long msg_file_size = read_whole_file(data_filename, (char**)&msg_file_buffer);
+  const unsigned long msg_file_size = read_whole_file(g_app_arg.data_file, (char**)&msg_file_buffer);
   if(msg_file_size != MSG_SINGLE_BLOCK_SIZE)
   {
     des_printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
@@ -1339,7 +1329,7 @@ int main(int argc, char **argv)
   }  
 
   uint8_t cipher[MSG_SINGLE_BLOCK_SIZE] = {0};
-  msg_single_block(msg_file_buffer, key_rot, op, cipher);
+  msg_single_block(msg_file_buffer, key_rot, g_app_arg.op, cipher);
 
   // result file handling
   if(argc == 5 && argv[4])
@@ -1369,6 +1359,9 @@ key_end:
 
 int des_printf(const char* restrict format, ...)
 {
+  if(g_app_arg.prv_flags & ARG_APP_QUITE)
+    return 0;
+
   va_list arg;
   va_start(arg, format);
 
