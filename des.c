@@ -30,6 +30,9 @@
 #include <ctype.h>
 #include <assert.h>
 #include <string.h>
+#include <stdarg.h>
+
+#define INPUT_FILES_LEN 256
 
 #define KEY_SIZE 8 
 #define KEY_PC1_SIZE 7
@@ -55,6 +58,7 @@
 
 #define GET_BYTE_IDX(bit_idx) ((size_t)(bit_idx - 1) / 8)
 
+int des_printf(const char *format, ...);
 void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg);
 void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg);
 void print_bin_simple(const char *title, const uint8_t * const buffer, size_t size);
@@ -166,15 +170,114 @@ static void key_rotation_print(const key_rotation_t key_rot)
   char title_str[10 + 1] = {0};
   for(; key_is_iterator_valid(it); ++idx, it = key_get_subkey(key_rot, idx))
   {
-    sprintf(title_str, "K%lu = ", idx);
+    des_printf(title_str, "K%lu = ", idx);
     print_bin_with_title(title_str, it.ptr, it.size, 6, 0);
     memset(title_str, 0x00, sizeof title_str);
   }
 }
 
+#define ARG_APP_ENCRYPT 0x80
+#define ARG_APP_DECRYPT 0x40
+#define ARG_APP_QUITE   0x20
+
+typedef struct app_arg
+{
+  enum operation op;
+  char key_file[INPUT_FILES_LEN];
+  char data_file[INPUT_FILES_LEN];
+  char output_file[INPUT_FILES_LEN];
+
+  uint8_t prv_flags;
+}app_arg;
+
+static app_arg g_app_arg;
+
+static app_arg arg_process(int argc, char **argv)
+{
+  app_arg ret = {
+    .op = encrypt,
+    .key_file = {0},
+    .data_file = {0},
+    .output_file = {0},
+    
+    .prv_flags = 0x00
+  };
+
+  for(int i = 0; i < argc; ++i)
+  {
+    const char *param = argv[i];
+    if(strcmp(param, "-e") == 0)
+    {
+      ret.op = encrypt;
+      ret.prv_flags |= ARG_APP_ENCRYPT;
+    }
+    else if(strcmp(param, "-d") == 0)
+    {
+      ret.op = decrypt;
+      ret.prv_flags |= ARG_APP_DECRYPT;
+    }
+    else if(strcmp(param, "-k") == 0)
+    {
+      ++i;
+      char *key_ptr = argv[i];
+      for(int idx = 0; key_ptr && i < INPUT_FILES_LEN; ++idx, ++key_ptr)
+        ret.key_file[idx] = *key_ptr;
+    }
+    else if(strcmp(param, "-f") == 0)
+    {
+      ++i;
+      char *file_ptr = argv[i];
+      for(int idx = 0; file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
+        ret.data_file[idx] = *file_ptr;
+    }
+    else if(strcmp(param, "-o") == 0)
+    {
+      ++i;
+      char *out_file_ptr = argv[i];
+      for(int idx = 0; out_file_ptr && i < INPUT_FILES_LEN; ++idx, ++out_file_ptr)
+        ret.output_file[idx] = *out_file_ptr;
+    }
+    else if(strcmp(param, "-q") == 0)
+    {
+      ret.prv_flags |= ARG_APP_QUITE;
+    }
+  }
+
+  return ret;
+}
+
+static int arg_valid(app_arg args)
+{
+  if(args.prv_flags & ARG_APP_ENCRYPT && args.prv_flags & ARG_APP_DECRYPT)
+  {
+    des_printf("-e (encrypt) and -d (decrypt) specified at the same time!\n\n");
+    return 0;
+  }
+
+  if((!(args.prv_flags & ARG_APP_ENCRYPT)) && (!(args.prv_flags & ARG_APP_DECRYPT)))
+  {
+    des_printf("-e (encrypt) or -d (decrypt) needs to be specified!\n\n");
+    return 0;
+  }
+
+  if(!*args.key_file)
+  {
+    des_printf("-k (key file) not specified!\n\n");
+    return 0;
+  } 
+
+  if(!*args.data_file)
+  {
+    des_printf("-f (data file) not specified!\n\n");
+    return 0;
+  }
+
+  return 1;
+}
+
 static void usage(void)
 {
-  printf("des_illustrated <e/d - encrypt or decrypt> <file_with_hex_str_key> <binary_file> <result_file - optional>\n");
+  des_printf("des_illustrated <e/d - encrypt or decrypt> <file_with_hex_str_key> <binary_file> <result_file - optional>\n");
 }
 
 static long get_file_size(FILE *file)
@@ -198,7 +301,7 @@ static unsigned long read_whole_file(const char * const filename, char **ret)
     return 0;
 
   const unsigned long actual_size = fread(*ret, 1, (unsigned long)file_size, file);
-  printf("%s read size %lu buff size %lu\n", filename, actual_size, file_size); 
+  des_printf("%s read size %lu buff size %lu\n", filename, actual_size, file_size); 
   fclose(file);
 
 //  ret = buffer;
@@ -516,12 +619,12 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 
 #ifdef LOG_KEY_CD_DETAILS
     char title_str[10 + 1] = {0};
-    sprintf(title_str, "C%lu = ", i);
+    sdes_printf(title_str, "C%lu = ", i);
     print_bin_simple(title_str, c_i, 4);
     
     memset(title_str, 0x00, sizeof title_str);
 
-    sprintf(title_str, "D%lu = ", i);
+    sdes_printf(title_str, "D%lu = ", i);
     print_bin_simple(title_str, d_i, 4);
 #endif
 
@@ -548,7 +651,7 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 
 #if 0
 #ifdef LOG_KEY_DETAILS
-    sprintf(title_str, "K%lu = ", i);
+    sdes_printf(title_str, "K%lu = ", i);
     print_bin_bits(title_str, K_pc2, KEY_PC2_SIZE, 6);
     memset(title_str, 0x00, sizeof title_str);
 #endif
@@ -1074,15 +1177,15 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_su
 #ifdef LOG_MSG_LR_INTERNAL_DETAILS
   const size_t num = key_rot.it;
   char title_str[10 + 1] = {0};
-  sprintf(title_str, "E%zu = ", num);
+  sdes_printf(title_str, "E%zu = ", num);
   print_bin_with_title(title_str, e_bit, MSG_E_BIT_SIZE, 6, 0);
 
   memset(title_str, 0x00, 10 + 1);
-  sprintf(title_str, "K%zuE%zu = ", key_rot.it, num);
+  sdes_printf(title_str, "K%zuE%zu = ", key_rot.it, num);
   print_bin_with_title(title_str, e_bit_key_xored, MSG_E_BIT_SIZE, 6, 0);
 
   memset(title_str, 0x00, 10 + 1);
-  sprintf(title_str, "B%zu = ", key_rot.it);
+  sdes_printf(title_str, "B%zu = ", key_rot.it);
   print_bin_with_title(title_str, b_indices, MSG_B_INDICES_SIZE, 8, 0);
 
   print_bin_with_title("S(B) = ", sbox_selection, MSG_SBOX_SELECTION_SIZE, 4, 0);
@@ -1113,7 +1216,7 @@ static void msg_single_block(const uint8_t * const msg_single_block, key_rotatio
 #ifdef LOG_MSG_LR_INTERNAL_DETAILS 
   print_bin_with_title("L0 = ", L, MSG_LR_SIZE, 4, 0); 
   print_bin_with_title("R0 = ", R, MSG_LR_SIZE, 4, 0);
-  printf("\n"); 
+  des_printf("\n"); 
 #endif
 
   key_get_iterator key_iterator = key_get_iterator_function(op);
@@ -1128,14 +1231,14 @@ static void msg_single_block(const uint8_t * const msg_single_block, key_rotatio
 
 #ifdef LOG_MSG_LR_INTERNAL_DETAILS
     char title_str[10 + 1] = {0};
-    sprintf(title_str, "L%zu = ", i);
+    sdes_printf(title_str, "L%zu = ", i);
     print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
    
     memset(title_str, 0x00, 10 + 1);
-    sprintf(title_str, "R%zu = ", i);
+    sdes_printf(title_str, "R%zu = ", i);
     print_bin_with_title(title_str, R, MSG_LR_SIZE, 4, 0);
 
-    printf("\n");
+    des_printf("\n");
 #endif
   }
 
@@ -1151,14 +1254,15 @@ static void msg_single_block(const uint8_t * const msg_single_block, key_rotatio
 #ifdef LOG_MSG_DETAILS
   print_bin_8bit("IP-1 = ", out_single_block, MSG_SINGLE_BLOCK_SIZE); 
   print_as_hexstr_with_title("Cipher = ", out_single_block, MSG_SINGLE_BLOCK_SIZE);
-  printf("\n");
+  des_printf("\n");
 #endif
 
 }
 
 int main(int argc, char **argv)
 {
-  if(argc < 4)
+  g_app_arg = arg_process(argc, argv); 
+  if(!arg_valid(g_app_arg))
   {
     usage();
     return 0;
@@ -1184,20 +1288,20 @@ int main(int argc, char **argv)
   const unsigned long key_file_size = read_whole_file(key_filename, &key_file_buffer);
   if(!key_file_size || !key_file_buffer)
   {
-    printf("Err readng key file size %lu\n", key_file_size);
+    des_printf("Err readng key file size %lu\n", key_file_size);
     goto key_end;
   }
 
   // ------------------------------  + 1 cause line feed
   if(key_file_size != KEY_HEXSTR_LEN + 1)
   {
-    printf("key file size is required to be hex string consisting 16 character\n");
+    des_printf("key file size is required to be hex string consisting 16 character\n");
     goto key_end;
   }
 
   if(!is_valid_hex_str(key_file_buffer, KEY_HEXSTR_LEN))
   {
-    printf("%s does not contain valid hex str\n", key_filename);
+    des_printf("%s does not contain valid hex str\n", key_filename);
     goto key_end;
   }
 
@@ -1211,7 +1315,7 @@ int main(int argc, char **argv)
   const key_rotation_t key_rot = key_rotation(key_pc1_bytes);
   if(!key_rot.subkeys)
   {
-    printf("couldn init subkeys");
+    des_printf("couldn init subkeys");
     goto key_end;
   }
 
@@ -1221,7 +1325,7 @@ int main(int argc, char **argv)
   print_bin_bits("K PC1 = ", key_pc1_bytes, KEY_PC1_SIZE, 7);
 
   key_rotation_print(key_rot);
-  printf("\n");
+  des_printf("\n");
 #endif
   
   // single block msg handling
@@ -1230,7 +1334,7 @@ int main(int argc, char **argv)
   const unsigned long msg_file_size = read_whole_file(data_filename, (char**)&msg_file_buffer);
   if(msg_file_size != MSG_SINGLE_BLOCK_SIZE)
   {
-    printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
+    des_printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
     goto msg_end;
   }  
 
@@ -1244,11 +1348,11 @@ int main(int argc, char **argv)
     if(result_file)
     {
       const unsigned long result_file_written = fwrite(cipher, 1, MSG_SINGLE_BLOCK_SIZE, result_file);
-      printf("Written %lu bytes to %s\n", result_file_written, argv[4]);
+      des_printf("Written %lu bytes to %s\n", result_file_written, argv[4]);
       fclose(result_file);
     }
     else
-      printf("Can't open result file %s", argv[4]);
+      des_printf("Can't open result file %s", argv[4]);
   }
 
 msg_end:
@@ -1261,6 +1365,18 @@ key_end:
     free(key_file_buffer);
  
   return 0;
+}
+
+int des_printf(const char* restrict format, ...)
+{
+  va_list arg;
+  va_start(arg, format);
+
+  const int ret = vprintf(format, arg);
+
+  va_end(arg);
+
+  return ret;
 }
 
 void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
@@ -1291,19 +1407,19 @@ void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word
       continue;
 
     if(cnt % bit_word_len == 0 && cnt != 0)
-      printf(" ");
+      des_printf(" ");
     
-    printf("%c", str[i]);
+    des_printf("%c", str[i]);
     ++cnt;
   }
   
   free(str);
-  printf("\n"); 
+  des_printf("\n"); 
 }
 
 void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
 {
-  printf("%s", title);
+  des_printf("%s", title);
   print_bin_detail(buffer, size, bit_word_len, skip_beg);
 }
 
@@ -1325,21 +1441,21 @@ void print_bin_8bit(const char *title, const uint8_t * const buffer, size_t size
 void print_buffer(const char * const buffer, unsigned long size)
 {
   for(unsigned long i = 0; i < size; ++i)
-   printf("%c", buffer[i]);
+   des_printf("%c", buffer[i]);
 
-  printf("\n"); 
+  des_printf("\n"); 
 }
 
 void print_as_hexstr(const uint8_t * const buffer, size_t size)
 {
   for(size_t i = 0; i < size; ++i)
-    printf("%02x ", buffer[i]);
+    des_printf("%02x ", buffer[i]);
 
-  printf("\n");
+  des_printf("\n");
 }
 
 void print_as_hexstr_with_title(const char *title, const uint8_t * const buffer, size_t size)
 {
-  printf("%s", title);
+  des_printf("%s", title);
   print_as_hexstr(buffer, size);
 }
