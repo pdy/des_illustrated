@@ -178,7 +178,7 @@ static void key_rotation_print(const key_rotation_t key_rot)
 
 #define ARG_APP_ENCRYPT 0x80
 #define ARG_APP_DECRYPT 0x40
-#define ARG_APP_QUITE   0x20
+#define ARG_APP_QUIET   0x20
 
 typedef struct app_arg
 {
@@ -239,7 +239,7 @@ static app_arg arg_process(int argc, char **argv)
     }
     else if(strcmp(param, "-q") == 0)
     {
-      ret.prv_flags |= ARG_APP_QUITE;
+      ret.prv_flags |= ARG_APP_QUIET;
     }
   }
 
@@ -283,7 +283,7 @@ static void usage(void)
   des_printf("\t-k key file in hex string format\n");
   des_printf("\t-f data file to encrypt/decrypt\n");
   des_printf("\t-o <optional> output file to save the result\n");
-  des_printf("\t-q <optional> quite mode - no logs\n");
+  des_printf("\t-q <optional> quiet mode - no logs\n");
 }
 
 static long get_file_size(FILE *file)
@@ -1267,7 +1267,7 @@ static void msg_single_block(const uint8_t * const msg_single_block, key_rotatio
 
 int main(int argc, char **argv)
 {
-  g_app_arg = arg_process(argc, argv); 
+  g_app_arg = arg_process(argc, argv);
   if(!arg_valid(g_app_arg))
   {
     usage();
@@ -1332,17 +1332,17 @@ int main(int argc, char **argv)
   msg_single_block(msg_file_buffer, key_rot, g_app_arg.op, cipher);
 
   // result file handling
-  if(argc == 5 && argv[4])
+  if(*g_app_arg.output_file)
   {
-    FILE *result_file = fopen(argv[4], "w");
+    FILE *result_file = fopen(g_app_arg.output_file, "w");
     if(result_file)
     {
       const unsigned long result_file_written = fwrite(cipher, 1, MSG_SINGLE_BLOCK_SIZE, result_file);
-      des_printf("Written %lu bytes to %s\n", result_file_written, argv[4]);
+      des_printf("Written %lu bytes to %s\n", result_file_written, g_app_arg.output_file);
       fclose(result_file);
     }
     else
-      des_printf("Can't open result file %s", argv[4]);
+      des_printf("Can't open result file '%s'", g_app_arg.output_file);
   }
 
 msg_end:
@@ -1359,7 +1359,7 @@ key_end:
 
 int des_printf(const char* restrict format, ...)
 {
-  if(g_app_arg.prv_flags & ARG_APP_QUITE)
+  if(g_app_arg.prv_flags & ARG_APP_QUIET)
     return 0;
 
   va_list arg;
