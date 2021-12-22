@@ -273,11 +273,11 @@ static int key_is_iterator_valid(key_subkey_t it)
   return it.ptr != NULL && it.size == KEY_ITER_SIZE;
 }
 
-static void key_add_iteration(key_rotation_t key_rot, size_t iteration, uint8_t *key_pc2)
+static void key_add_subkey(key_rotation_t key_rot, size_t subkey_num, uint8_t *key_pc2)
 {
-  assert(iteration >= 1 && iteration <= KEY_SUBKEYS_NUM);
+  assert(subkey_num >= 1 && subkey_num <= KEY_SUBKEYS_NUM);
 
-  memcpy(key_rot.subkeys + ((iteration - 1) * KEY_ITER_SIZE), key_pc2, KEY_ITER_SIZE);
+  memcpy(key_rot.subkeys + ((subkey_num - 1) * KEY_ITER_SIZE), key_pc2, KEY_ITER_SIZE);
 }
 
 static void key_rotation_print(const key_rotation_t key_rot)
@@ -671,7 +671,7 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
     memset(title_str, 0x00, sizeof title_str);
 #endif
 #endif
-    key_add_iteration(ret_subkeys, i, K_pc2);
+    key_add_subkey(ret_subkeys, i, K_pc2);
   } 
 
   return ret_subkeys; 
