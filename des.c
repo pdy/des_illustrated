@@ -58,6 +58,29 @@
 
 #define GET_BYTE_IDX(bit_idx) ((size_t)(bit_idx - 1) / 8)
 
+#define ARG_APP_ENCRYPT 0x80
+#define ARG_APP_DECRYPT 0x40
+#define ARG_APP_QUIET   0x20
+#define ARG_APP_NO_ARGS 0x10
+
+enum operation
+{
+  encrypt = 0,
+  decrypt
+};
+
+typedef struct app_arg_t
+{
+  enum operation op;
+  char key_file[INPUT_FILES_LEN];
+  char data_file[INPUT_FILES_LEN];
+  char output_file[INPUT_FILES_LEN];
+
+  uint8_t prv_flags;
+}app_arg_t;
+
+static app_arg_t g_app_arg;
+
 int des_printf(const char *format, ...);
 void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg);
 void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg);
@@ -68,12 +91,105 @@ void print_buffer(const char * const buffer, unsigned long size);
 void print_as_hexstr(const uint8_t * const buffer, size_t size);
 void print_as_hexstr_with_title(const char *title, const uint8_t * const buffer, size_t size);
 
-enum operation
+static app_arg_t arg_process(int argc, char **argv)
 {
-  encrypt = 0,
-  decrypt
-};
+  app_arg_t ret = {
+    .op = encrypt,
+    .key_file = {0},
+    .data_file = {0},
+    .output_file = {0},
+    
+    .prv_flags = 0x00
+  };
 
+  if(argc <= 1)
+  {
+    ret.prv_flags |= ARG_APP_NO_ARGS;
+    return ret;
+  }
+
+  for(int i = 0; i < argc; ++i)
+  {
+    const char *param = argv[i];
+    if(strcmp(param, "-e") == 0)
+    {
+      ret.op = encrypt;
+      ret.prv_flags |= ARG_APP_ENCRYPT;
+    }
+    else if(strcmp(param, "-d") == 0)
+    {
+      ret.op = decrypt;
+      ret.prv_flags |= ARG_APP_DECRYPT;
+    }
+    else if(strcmp(param, "-k") == 0 && i+1 < argc)
+    {
+      char *key_ptr = argv[i+1];
+      for(int idx = 0; key_ptr && *key_ptr && i < INPUT_FILES_LEN; ++idx, ++key_ptr)
+        ret.key_file[idx] = *key_ptr;
+    }
+    else if(strcmp(param, "-f") == 0 && i+1 < argc)
+    {
+      char *file_ptr = argv[i+1];
+      for(int idx = 0; file_ptr && *file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
+        ret.data_file[idx] = *file_ptr;
+    }
+    else if(strcmp(param, "-o") == 0 && i+1 < argc)
+    {
+      char *out_file_ptr = argv[i+1];
+      for(int idx = 0; out_file_ptr && *out_file_ptr && i < INPUT_FILES_LEN; ++idx, ++out_file_ptr)
+        ret.output_file[idx] = *out_file_ptr;
+    }
+    else if(strcmp(param, "-q") == 0)
+    {
+      ret.prv_flags |= ARG_APP_QUIET;
+    }
+  }
+
+  return ret;
+}
+
+static int arg_valid(app_arg_t args)
+{
+  if(args.prv_flags & ARG_APP_NO_ARGS)
+    return 0;
+
+  if(args.prv_flags & ARG_APP_ENCRYPT && args.prv_flags & ARG_APP_DECRYPT)
+  {
+    printf("-e (encrypt) and -d (decrypt) specified at the same time!\n\n");
+    return 0;
+  }
+
+  if((!(args.prv_flags & ARG_APP_ENCRYPT)) && (!(args.prv_flags & ARG_APP_DECRYPT)))
+  {
+    printf("-e (encrypt) or -d (decrypt) needs to be specified!\n\n");
+    return 0;
+  }
+
+  if(!*args.key_file)
+  {
+    printf("-k (key file) not specified!\n\n");
+    return 0;
+  } 
+
+  if(!*args.data_file)
+  {
+    printf("-f (data file) not specified!\n\n");
+    return 0;
+  }
+
+  return 1;
+}
+
+static void usage(void)
+{
+  printf("des_illustrated <-e or -d> -k <key file> -f <data file> [OPTIONS] \n\n");
+  printf("\t-e encrypt\n");
+  printf("\t-d decrypt\n");
+  printf("\t-k key file in hex string format\n");
+  printf("\t-f data file to encrypt/decrypt\n");
+  printf("\t-o <optional> output file to save the result\n");
+  printf("\t-q <optional> quiet mode - no console output except in case of errors\n");
+}
 typedef struct key_rotation_t
 {
   uint8_t *subkeys;
@@ -174,123 +290,6 @@ static void key_rotation_print(const key_rotation_t key_rot)
     print_bin_with_title(title_str, it.ptr, it.size, 6, 0);
     memset(title_str, 0x00, sizeof title_str);
   }
-}
-
-#define ARG_APP_ENCRYPT 0x80
-#define ARG_APP_DECRYPT 0x40
-#define ARG_APP_QUIET   0x20
-#define ARG_APP_NO_ARGS 0x10
-
-typedef struct app_arg
-{
-  enum operation op;
-  char key_file[INPUT_FILES_LEN];
-  char data_file[INPUT_FILES_LEN];
-  char output_file[INPUT_FILES_LEN];
-
-  uint8_t prv_flags;
-}app_arg;
-
-static app_arg g_app_arg;
-
-static app_arg arg_process(int argc, char **argv)
-{
-  app_arg ret = {
-    .op = encrypt,
-    .key_file = {0},
-    .data_file = {0},
-    .output_file = {0},
-    
-    .prv_flags = 0x00
-  };
-
-  if(argc <= 1)
-  {
-    ret.prv_flags |= ARG_APP_NO_ARGS;
-    return ret;
-  }
-
-  for(int i = 0; i < argc; ++i)
-  {
-    const char *param = argv[i];
-    if(strcmp(param, "-e") == 0)
-    {
-      ret.op = encrypt;
-      ret.prv_flags |= ARG_APP_ENCRYPT;
-    }
-    else if(strcmp(param, "-d") == 0)
-    {
-      ret.op = decrypt;
-      ret.prv_flags |= ARG_APP_DECRYPT;
-    }
-    else if(strcmp(param, "-k") == 0 && i+1 < argc)
-    {
-      char *key_ptr = argv[i+1];
-      for(int idx = 0; key_ptr && *key_ptr && i < INPUT_FILES_LEN; ++idx, ++key_ptr)
-        ret.key_file[idx] = *key_ptr;
-    }
-    else if(strcmp(param, "-f") == 0 && i+1 < argc)
-    {
-      char *file_ptr = argv[i+1];
-      for(int idx = 0; file_ptr && *file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
-        ret.data_file[idx] = *file_ptr;
-    }
-    else if(strcmp(param, "-o") == 0 && i+1 < argc)
-    {
-      char *out_file_ptr = argv[i+1];
-      for(int idx = 0; out_file_ptr && *out_file_ptr && i < INPUT_FILES_LEN; ++idx, ++out_file_ptr)
-        ret.output_file[idx] = *out_file_ptr;
-    }
-    else if(strcmp(param, "-q") == 0)
-    {
-      ret.prv_flags |= ARG_APP_QUIET;
-    }
-  }
-
-  return ret;
-}
-
-static int arg_valid(app_arg args)
-{
-  if(args.prv_flags & ARG_APP_NO_ARGS)
-    return 0;
-
-  if(args.prv_flags & ARG_APP_ENCRYPT && args.prv_flags & ARG_APP_DECRYPT)
-  {
-    printf("-e (encrypt) and -d (decrypt) specified at the same time!\n\n");
-    return 0;
-  }
-
-  if((!(args.prv_flags & ARG_APP_ENCRYPT)) && (!(args.prv_flags & ARG_APP_DECRYPT)))
-  {
-    printf("-e (encrypt) or -d (decrypt) needs to be specified!\n\n");
-    return 0;
-  }
-
-  if(!*args.key_file)
-  {
-    printf("-k (key file) not specified!\n\n");
-    return 0;
-  } 
-
-  if(!*args.data_file)
-  {
-    printf("-f (data file) not specified!\n\n");
-    return 0;
-  }
-
-  return 1;
-}
-
-static void usage(void)
-{
-  printf("des_illustrated <-e or -d> -k <key file> -f <data file> [OPTIONS] \n\n");
-  printf("\t-e encrypt\n");
-  printf("\t-d decrypt\n");
-  printf("\t-k key file in hex string format\n");
-  printf("\t-f data file to encrypt/decrypt\n");
-  printf("\t-o <optional> output file to save the result\n");
-  printf("\t-q <optional> quiet mode - no console output except in case of errors\n");
 }
 
 static long file_get_size(FILE *file)
