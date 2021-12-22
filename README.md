@@ -1,5 +1,5 @@
 # des_illustrated
-Educational purpose DES implementation.
+Educational purpose DES implementation so I can show anybody how weird DES is when compared to modern ciphers.
 
 DES description http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm. Copy of which is stored in doc folder in this repository.
 
