@@ -12,6 +12,8 @@ flags = [
     '-Wno-unused-parameter',
     '-Wno-unused-function',
     '-Wno-unused-variable',
+    '-Wno-format-nonliteral',
+    '-Wno-padded',
     '-std=c99',
     '-x','c',
     '-I','.'
