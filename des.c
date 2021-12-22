@@ -170,7 +170,7 @@ static void key_rotation_print(const key_rotation_t key_rot)
   char title_str[10 + 1] = {0};
   for(; key_is_iterator_valid(it); ++idx, it = key_get_subkey(key_rot, idx))
   {
-    des_printf(title_str, "K%lu = ", idx);
+    sprintf(title_str, "K%lu = ", idx);
     print_bin_with_title(title_str, it.ptr, it.size, 6, 0);
     memset(title_str, 0x00, sizeof title_str);
   }
@@ -634,12 +634,12 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 
 #ifdef LOG_KEY_CD_DETAILS
     char title_str[10 + 1] = {0};
-    sdes_printf(title_str, "C%lu = ", i);
+    sprintf(title_str, "C%lu = ", i);
     print_bin_simple(title_str, c_i, 4);
     
     memset(title_str, 0x00, sizeof title_str);
 
-    sdes_printf(title_str, "D%lu = ", i);
+    sprintf(title_str, "D%lu = ", i);
     print_bin_simple(title_str, d_i, 4);
 #endif
 
@@ -666,7 +666,7 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 
 #if 0
 #ifdef LOG_KEY_DETAILS
-    sdes_printf(title_str, "K%lu = ", i);
+    sprintf(title_str, "K%lu = ", i);
     print_bin_bits(title_str, K_pc2, KEY_PC2_SIZE, 6);
     memset(title_str, 0x00, sizeof title_str);
 #endif
@@ -1192,15 +1192,15 @@ static void msg_calc_Rn(const uint8_t * const L, const uint8_t * const R, key_su
 #ifdef LOG_MSG_LR_INTERNAL_DETAILS
   const size_t num = key_rot.it;
   char title_str[10 + 1] = {0};
-  sdes_printf(title_str, "E%zu = ", num);
+  sprintf(title_str, "E%zu = ", num);
   print_bin_with_title(title_str, e_bit, MSG_E_BIT_SIZE, 6, 0);
 
   memset(title_str, 0x00, 10 + 1);
-  sdes_printf(title_str, "K%zuE%zu = ", key_rot.it, num);
+  sprintf(title_str, "K%zuE%zu = ", key_rot.it, num);
   print_bin_with_title(title_str, e_bit_key_xored, MSG_E_BIT_SIZE, 6, 0);
 
   memset(title_str, 0x00, 10 + 1);
-  sdes_printf(title_str, "B%zu = ", key_rot.it);
+  sprintf(title_str, "B%zu = ", key_rot.it);
   print_bin_with_title(title_str, b_indices, MSG_B_INDICES_SIZE, 8, 0);
 
   print_bin_with_title("S(B) = ", sbox_selection, MSG_SBOX_SELECTION_SIZE, 4, 0);
@@ -1246,11 +1246,11 @@ static void msg_single_block(const uint8_t * const msg_single_block, key_rotatio
 
 #ifdef LOG_MSG_LR_INTERNAL_DETAILS
     char title_str[10 + 1] = {0};
-    sdes_printf(title_str, "L%zu = ", i);
+    sprintf(title_str, "L%zu = ", i);
     print_bin_with_title(title_str, L, MSG_LR_SIZE, 4, 0);
    
     memset(title_str, 0x00, 10 + 1);
-    sdes_printf(title_str, "R%zu = ", i);
+    sprintf(title_str, "R%zu = ", i);
     print_bin_with_title(title_str, R, MSG_LR_SIZE, 4, 0);
 
     des_printf("\n");
