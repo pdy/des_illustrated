@@ -48,7 +48,7 @@ int main(void)
       return 0;
     }
 
-    FILE *cipher_file = fopen(cipher_filename[i], "w");
+    FILE *cipher_file = fopen(cipher_filename[i], "wb");
     if(!cipher_file)
     {
       printf("%s: %s\n", "Can't open the cipher file", cipher_filename[i]);
@@ -65,6 +65,38 @@ int main(void)
     fclose(key_file);
     fclose(cipher_file);
   }
-   
+
+  FILE *data_file = fopen(lewinski.data_filename, "wb");
+  if(!data_file)
+  {
+    printf("%s: %s\n", "Can't open the data file", lewinski.data_filename);
+    return 0;
+  }
+
+  FILE *key_file = fopen(lewinski.key_filename, "w");
+  if(!key_file)
+  {
+    printf("%s: %s\n", "Can't open the key file", lewinski.key_filename);
+    fclose(data_file);
+    return 0;
+  }
+
+  FILE *cipher_file = fopen(lewinski.cipher_filename, "wb");
+  if(!cipher_file)
+  {
+    printf("%s: %s\n", "Can't open the cipher file", lewinski.cipher_filename);
+    fclose(data_file);
+    fclose(key_file);
+    return 0;
+  }
+
+  fwrite(lewinski.data_not_padded, 1, strlen(lewinski.data_not_padded), data_file);
+  fwrite(lewinski.cipher, 1, sizeof(lewinski.cipher), cipher_file);
+  fprintf(key_file, "%s\n", lewinski.key_hex_str);
+
+  fclose(data_file);
+  fclose(key_file);
+  fclose(cipher_file);
+
   return 0;
 }
