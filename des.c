@@ -179,6 +179,7 @@ static void key_rotation_print(const key_rotation_t key_rot)
 #define ARG_APP_ENCRYPT 0x80
 #define ARG_APP_DECRYPT 0x40
 #define ARG_APP_QUIET   0x20
+#define ARG_APP_NO_ARGS 0x10
 
 typedef struct app_arg
 {
@@ -203,6 +204,12 @@ static app_arg arg_process(int argc, char **argv)
     .prv_flags = 0x00
   };
 
+  if(argc <= 1)
+  {
+    ret.prv_flags |= ARG_APP_NO_ARGS;
+    return ret;
+  }
+
   for(int i = 0; i < argc; ++i)
   {
     const char *param = argv[i];
@@ -216,24 +223,21 @@ static app_arg arg_process(int argc, char **argv)
       ret.op = decrypt;
       ret.prv_flags |= ARG_APP_DECRYPT;
     }
-    else if(strcmp(param, "-k") == 0)
+    else if(strcmp(param, "-k") == 0 && i+1 < argc)
     {
-      ++i;
-      char *key_ptr = argv[i];
+      char *key_ptr = argv[i+1];
       for(int idx = 0; key_ptr && *key_ptr && i < INPUT_FILES_LEN; ++idx, ++key_ptr)
         ret.key_file[idx] = *key_ptr;
     }
-    else if(strcmp(param, "-f") == 0)
+    else if(strcmp(param, "-f") == 0 && i+1 < argc)
     {
-      ++i;
-      char *file_ptr = argv[i];
+      char *file_ptr = argv[i+1];
       for(int idx = 0; file_ptr && *file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
         ret.data_file[idx] = *file_ptr;
     }
-    else if(strcmp(param, "-o") == 0)
+    else if(strcmp(param, "-o") == 0 && i+1 < argc)
     {
-      ++i;
-      char *out_file_ptr = argv[i];
+      char *out_file_ptr = argv[i+1];
       for(int idx = 0; out_file_ptr && *out_file_ptr && i < INPUT_FILES_LEN; ++idx, ++out_file_ptr)
         ret.output_file[idx] = *out_file_ptr;
     }
@@ -248,27 +252,30 @@ static app_arg arg_process(int argc, char **argv)
 
 static int arg_valid(app_arg args)
 {
+  if(args.prv_flags & ARG_APP_NO_ARGS)
+    return 0;
+
   if(args.prv_flags & ARG_APP_ENCRYPT && args.prv_flags & ARG_APP_DECRYPT)
   {
-    des_printf("-e (encrypt) and -d (decrypt) specified at the same time!\n\n");
+    printf("-e (encrypt) and -d (decrypt) specified at the same time!\n\n");
     return 0;
   }
 
   if((!(args.prv_flags & ARG_APP_ENCRYPT)) && (!(args.prv_flags & ARG_APP_DECRYPT)))
   {
-    des_printf("-e (encrypt) or -d (decrypt) needs to be specified!\n\n");
+    printf("-e (encrypt) or -d (decrypt) needs to be specified!\n\n");
     return 0;
   }
 
   if(!*args.key_file)
   {
-    des_printf("-k (key file) not specified!\n\n");
+    printf("-k (key file) not specified!\n\n");
     return 0;
   } 
 
   if(!*args.data_file)
   {
-    des_printf("-f (data file) not specified!\n\n");
+    printf("-f (data file) not specified!\n\n");
     return 0;
   }
 
@@ -277,16 +284,16 @@ static int arg_valid(app_arg args)
 
 static void usage(void)
 {
-  des_printf("des_illustrated <-e or -d> -k<key file> -f<data file> [OPTIONS] \n\n");
-  des_printf("\t-e encrypt\n");
-  des_printf("\t-d decrypt\n");
-  des_printf("\t-k key file in hex string format\n");
-  des_printf("\t-f data file to encrypt/decrypt\n");
-  des_printf("\t-o <optional> output file to save the result\n");
-  des_printf("\t-q <optional> quiet mode - no logs\n");
+  printf("des_illustrated <-e or -d> -k <key file> -f <data file> [OPTIONS] \n\n");
+  printf("\t-e encrypt\n");
+  printf("\t-d decrypt\n");
+  printf("\t-k key file in hex string format\n");
+  printf("\t-f data file to encrypt/decrypt\n");
+  printf("\t-o <optional> output file to save the result\n");
+  printf("\t-q <optional> quiet mode - no console output except in case of errors\n");
 }
 
-static long get_file_size(FILE *file)
+static long file_get_size(FILE *file)
 {
   fseek(file, 0, SEEK_END);
   const long ret = ftell(file);
@@ -295,13 +302,16 @@ static long get_file_size(FILE *file)
   return ret;
 }
 
-static unsigned long read_whole_file(const char * const filename, char **ret)
+static unsigned long file_read_all(const char * const filename, char **ret)
 {
   FILE *file = fopen(filename, "r");
   if(!file)
     return 0;
 
-  const long file_size = get_file_size(file);
+  const long file_size = file_get_size(file);
+  if(!file_size)
+    return 0;
+
   *ret = (char*)malloc(sizeof(char) * (unsigned long)file_size);
   if(!ret)
     return 0;
@@ -310,7 +320,6 @@ static unsigned long read_whole_file(const char * const filename, char **ret)
   des_printf("%s read size %lu buff size %lu\n", filename, actual_size, file_size); 
   fclose(file);
 
-//  ret = buffer;
   return actual_size;
 }
 
@@ -323,7 +332,7 @@ static int is_valid_hex_str(const char * const buffer, size_t size)
 {
   for(size_t i = 0; i < size; ++i)
     if(!is_hex_digit(buffer[i]))
-        return 0;
+      return 0;
 
   return 1;
 }
@@ -1275,23 +1284,23 @@ int main(int argc, char **argv)
   }
  
   char *key_file_buffer = NULL;
-  const unsigned long key_file_size = read_whole_file(g_app_arg.key_file, &key_file_buffer);
+  const unsigned long key_file_size = file_read_all(g_app_arg.key_file, &key_file_buffer);
   if(!key_file_size || !key_file_buffer)
   {
-    des_printf("Err readng key file size %lu\n", key_file_size);
+    printf("Error reading key '%s' file size '%lu'\n", g_app_arg.key_file, key_file_size);
     goto key_end;
   }
 
   // ------------------------------  + 1 cause line feed
   if(key_file_size != KEY_HEXSTR_LEN + 1)
   {
-    des_printf("key file size is required to be hex string consisting 16 character\n");
+    printf("key file size is required to be hex string consisting 16 character\n");
     goto key_end;
   }
 
   if(!is_valid_hex_str(key_file_buffer, KEY_HEXSTR_LEN))
   {
-    des_printf("%s does not contain valid hex str\n", g_app_arg.key_file);
+    printf("%s does not contain valid hex str\n", g_app_arg.key_file);
     goto key_end;
   }
 
@@ -1305,7 +1314,7 @@ int main(int argc, char **argv)
   const key_rotation_t key_rot = key_rotation(key_pc1_bytes);
   if(!key_rot.subkeys)
   {
-    des_printf("couldn init subkeys");
+    printf("couldn init subkeys");
     goto key_end;
   }
 
@@ -1321,10 +1330,10 @@ int main(int argc, char **argv)
   // single block msg handling
   
   uint8_t *msg_file_buffer = NULL;
-  const unsigned long msg_file_size = read_whole_file(g_app_arg.data_file, (char**)&msg_file_buffer);
+  const unsigned long msg_file_size = file_read_all(g_app_arg.data_file, (char**)&msg_file_buffer);
   if(msg_file_size != MSG_SINGLE_BLOCK_SIZE)
   {
-    des_printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
+    printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
     goto msg_end;
   }  
 
@@ -1342,7 +1351,7 @@ int main(int argc, char **argv)
       fclose(result_file);
     }
     else
-      des_printf("Can't open result file '%s'", g_app_arg.output_file);
+      printf("Can't open result file '%s'", g_app_arg.output_file);
   }
 
 msg_end:
