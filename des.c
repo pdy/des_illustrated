@@ -24,6 +24,7 @@
 
 */
 
+#include <math.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -1330,28 +1331,58 @@ int main(int argc, char **argv)
   
   uint8_t *msg_file_buffer = NULL;
   const unsigned long msg_file_size = file_read_all(g_app_arg.data_file, (char**)&msg_file_buffer);
-  if(msg_file_size != MSG_SINGLE_BLOCK_SIZE)
+  if(!msg_file_size)
   {
-    printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
+    printf("Empty data file '%s'", g_app_arg.data_file);
     goto msg_end;
   }  
 
-  uint8_t cipher[MSG_SINGLE_BLOCK_SIZE] = {0};
-  msg_single_block(msg_file_buffer, key_rot, g_app_arg.op, cipher);
-
   // result file handling
+  FILE *result_file = NULL;
   if(*g_app_arg.output_file)
   {
-    FILE *result_file = fopen(g_app_arg.output_file, "w");
+    result_file = fopen(g_app_arg.output_file, "wb");
+    if(!result_file)
+      printf("Can't open result file '%s'", g_app_arg.output_file);
+  }
+
+  const size_t data_iterations = (size_t)(ceil((double)msg_file_size / MSG_SINGLE_BLOCK_SIZE));
+  for(size_t it = 0; it < data_iterations; ++it)
+  {
+    uint8_t cipher[MSG_SINGLE_BLOCK_SIZE] = {0};
+
+    const size_t pos = it * MSG_SINGLE_BLOCK_SIZE;
+    const size_t overlaps = pos + MSG_SINGLE_BLOCK_SIZE;
+    if(overlaps <= msg_file_size)
+    {
+      msg_single_block(msg_file_buffer + pos, key_rot, g_app_arg.op, cipher);
+    }
+    else
+    {
+      // need to add padding
+     
+      const size_t pad_bytes_to_add = overlaps - msg_file_size;
+      const size_t remaining_msg_bytes = MSG_SINGLE_BLOCK_SIZE - pad_bytes_to_add;
+      uint8_t padded_block[MSG_SINGLE_BLOCK_SIZE];
+      for(size_t i = 0; i < remaining_msg_bytes; ++i)
+        padded_block[i] = *(msg_file_buffer + pos + i);
+
+      for(size_t i = remaining_msg_bytes; i < (remaining_msg_bytes + pad_bytes_to_add); ++i)
+        padded_block[i] = 0x00;
+
+
+      msg_single_block(padded_block, key_rot, g_app_arg.op, cipher);
+    }
+
     if(result_file)
     {
       const unsigned long result_file_written = fwrite(cipher, 1, MSG_SINGLE_BLOCK_SIZE, result_file);
       des_printf("Written %lu bytes to %s\n", result_file_written, g_app_arg.output_file);
-      fclose(result_file);
     }
-    else
-      printf("Can't open result file '%s'", g_app_arg.output_file);
-  }
+  } 
+
+  if(result_file)
+    fclose(result_file);
 
 msg_end:
   free_key_rot(key_rot);

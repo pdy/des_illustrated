@@ -6,7 +6,7 @@ FLAGS := -std=c99
 
 LD_FLAGS := #-L
 
-LD_LIBS := -pthread
+LD_LIBS := -lm -pthread
 
 INCLUDES :=  
 
