@@ -29,6 +29,17 @@
 
 #include <stdint.h>
 
+#ifdef __unix__
+
+#include <unistd.h>
+
+static inline int remove_file(const char *file_path)
+{
+  return unlink(file_path) == 0; 
+}
+
+#endif
+
 const char *data_filename[] =
 {
   "data/data_1.bin",

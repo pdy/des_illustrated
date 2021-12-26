@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #include "common.h"
 
@@ -96,7 +95,7 @@ int main(int argc, char **argv)
       if(correct_encrypt_result[j] != (unsigned char)file_content[j])
       {
         printf("\n\n!!! ENCRYPTING FAILED !!!\n %s\n\n", data_filename[i]);
-        unlink(tmp_bin_file_path);
+        remove_file(tmp_bin_file_path);
         return 0;
       }
     }
@@ -120,7 +119,7 @@ int main(int argc, char **argv)
       if(correct_decrypt_result[j] != (unsigned char)file_content[j])
       {
         printf("\n\n!!! DECRYPTING FAILED !!!\n %s\n\n", cipher_filename[i]);
-        unlink(tmp_bin_file_path);
+        remove_file(tmp_bin_file_path);
         return 0;
       }
     }
@@ -130,8 +129,63 @@ int main(int argc, char **argv)
     memset(encrypt_cmd, 0x00, 10240);
     memset(decrypt_cmd, 0x00, 10240);
   }
+ 
+  sprintf(encrypt_cmd, "%s -e %s -k %s -o %s -q", argv[1], lewinski.data_filename, lewinski.key_filename, tmp_bin_file_path);
+  sprintf(decrypt_cmd, "%s -d %s -k %s -o %s -q", argv[1], lewinski.cipher_filename, lewinski.key_filename, tmp_bin_file_path);
+
+
+  char *file_content = NULL; 
+    
+  printf("\n\nEncrypt %s \n\n", encrypt_cmd);
+
+  system(encrypt_cmd);
+
+  const unsigned long encrypt_bytes_read = read_whole_file(tmp_bin_file_path, &file_content);
+  if(!encrypt_bytes_read)
+  {
+    printf("Cant read from %s during ENCRYPT test\n", tmp_bin_file_path);
+    return 0;
+  } 
+
+  const unsigned char *correct_encrypt_result = lewinski.cipher;
+  for(size_t j = 0; j < encrypt_bytes_read && j < sizeof(lewinski.cipher) / sizeof(lewinski.cipher[0]); ++j)
+  {
+    if(correct_encrypt_result[j] != (unsigned char)file_content[j])
+    {
+      printf("\n\n!!! ENCRYPTING FAILED !!!\n %s\n\n", lewinski.data_filename);
+      //remove_file(tmp_bin_file_path);
+      return 0;
+    }
+  }
+
+  free(file_content);
   
-  unlink(tmp_bin_file_path);
+  
+  printf("\n\nDecrypt %s \n\n", decrypt_cmd);
+    
+  system(decrypt_cmd);
+
+  const unsigned long decrypt_bytes_read = read_whole_file(tmp_bin_file_path, &file_content);
+  if(!decrypt_bytes_read)
+  {
+    printf("Cant read from %s during DECRYPT test\n", tmp_bin_file_path);
+    return 0;
+  } 
+
+  const unsigned char *correct_decrypt_result = lewinski.data_not_padded;
+  for(size_t j = 0; j < decrypt_bytes_read && strlen(lewinski.data_not_padded); ++j)
+  {
+    if(correct_decrypt_result[j] != (unsigned char)file_content[j])
+    {
+      printf("\n\n!!! DECRYPTING FAILED !!!\n %s\n\n", lewinski.cipher_filename);
+      remove_file(tmp_bin_file_path);
+      return 0;
+    }
+  }
+
+  free(file_content);
+ 
+  remove_file(tmp_bin_file_path);
 
   return 0;
 }
