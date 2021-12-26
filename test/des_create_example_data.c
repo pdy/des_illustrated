@@ -31,7 +31,7 @@
 
 int main(void)
 {
-  for(size_t i = 0; i < 2; ++i)
+  for(size_t i = 0; i < DES_TEST_CASES; ++i)
   {
     FILE *data_file = fopen(data_filename[i], "wb");
     if(!data_file)
