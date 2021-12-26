@@ -144,14 +144,6 @@ static app_arg_t arg_process(int argc, char **argv)
       for(int idx = 0; key_ptr && *key_ptr && i < INPUT_FILES_LEN; ++idx, ++key_ptr)
         ret.key_file[idx] = *key_ptr;
     }
-#if 0
-    else if(strcmp(param, "-f") == 0 && i+1 < argc)
-    {
-      char *file_ptr = argv[i+1];
-      for(int idx = 0; file_ptr && *file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
-        ret.data_file[idx] = *file_ptr;
-    }
-#endif
     else if(strcmp(param, "-o") == 0 && i+1 < argc)
     {
       char *out_file_ptr = argv[i+1];
