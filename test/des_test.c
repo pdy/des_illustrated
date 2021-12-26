@@ -74,8 +74,8 @@ int main(int argc, char **argv)
   char decrypt_cmd[10240] = {0};
   for(size_t i = 0; i < DES_TEST_CASES; ++i)
   { 
-    sprintf(encrypt_cmd, "%s -e -k %s -f %s -o %s -q", argv[1], key_filename[i], data_filename[i], tmp_bin_file_path);
-    sprintf(decrypt_cmd, "%s -d -k %s -f %s -o %s -q", argv[1], key_filename[i], cipher_filename[i], tmp_bin_file_path);
+    sprintf(encrypt_cmd, "%s -e %s -k %s -o %s -q", argv[1], data_filename[i], key_filename[i], tmp_bin_file_path);
+    sprintf(decrypt_cmd, "%s -d %s -k %s -o %s -q", argv[1], cipher_filename[i], key_filename[i], tmp_bin_file_path);
   
     char *file_content = NULL; 
     

@@ -77,7 +77,7 @@ typedef struct app_arg_t
   char data_file[INPUT_FILES_LEN];
   char output_file[INPUT_FILES_LEN];
 
-  uint8_t prv_flags;
+  uint8_t flags;
 }app_arg_t;
 
 static app_arg_t g_app_arg;
@@ -100,12 +100,12 @@ static app_arg_t arg_process(int argc, char **argv)
     .data_file = {0},
     .output_file = {0},
     
-    .prv_flags = 0x00
+    .flags = 0x00
   };
 
   if(argc <= 1)
   {
-    ret.prv_flags |= ARG_APP_NO_ARGS;
+    ret.flags |= ARG_APP_NO_ARGS;
     return ret;
   }
 
@@ -115,12 +115,28 @@ static app_arg_t arg_process(int argc, char **argv)
     if(strcmp(param, "-e") == 0)
     {
       ret.op = encrypt;
-      ret.prv_flags |= ARG_APP_ENCRYPT;
+      ret.flags |= ARG_APP_ENCRYPT;
+
+      if(i + 1 < argc)
+      {
+        char *file_ptr = argv[i+1];
+        for(int idx = 0; file_ptr && *file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
+          ret.data_file[idx] = *file_ptr;
+
+      }
     }
     else if(strcmp(param, "-d") == 0)
     {
       ret.op = decrypt;
-      ret.prv_flags |= ARG_APP_DECRYPT;
+      ret.flags |= ARG_APP_DECRYPT;
+
+      if(i + 1 < argc)
+      {
+        char *file_ptr = argv[i+1];
+        for(int idx = 0; file_ptr && *file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
+          ret.data_file[idx] = *file_ptr;
+
+      }
     }
     else if(strcmp(param, "-k") == 0 && i+1 < argc)
     {
@@ -128,12 +144,14 @@ static app_arg_t arg_process(int argc, char **argv)
       for(int idx = 0; key_ptr && *key_ptr && i < INPUT_FILES_LEN; ++idx, ++key_ptr)
         ret.key_file[idx] = *key_ptr;
     }
+#if 0
     else if(strcmp(param, "-f") == 0 && i+1 < argc)
     {
       char *file_ptr = argv[i+1];
       for(int idx = 0; file_ptr && *file_ptr && i < INPUT_FILES_LEN; ++idx, ++file_ptr)
         ret.data_file[idx] = *file_ptr;
     }
+#endif
     else if(strcmp(param, "-o") == 0 && i+1 < argc)
     {
       char *out_file_ptr = argv[i+1];
@@ -142,7 +160,7 @@ static app_arg_t arg_process(int argc, char **argv)
     }
     else if(strcmp(param, "-q") == 0)
     {
-      ret.prv_flags |= ARG_APP_QUIET;
+      ret.flags |= ARG_APP_QUIET;
     }
   }
 
@@ -151,16 +169,16 @@ static app_arg_t arg_process(int argc, char **argv)
 
 static int arg_valid(app_arg_t args)
 {
-  if(args.prv_flags & ARG_APP_NO_ARGS)
+  if(args.flags & ARG_APP_NO_ARGS)
     return 0;
 
-  if(args.prv_flags & ARG_APP_ENCRYPT && args.prv_flags & ARG_APP_DECRYPT)
+  if(args.flags & ARG_APP_ENCRYPT && args.flags & ARG_APP_DECRYPT)
   {
     printf("-e (encrypt) and -d (decrypt) specified at the same time!\n\n");
     return 0;
   }
 
-  if((!(args.prv_flags & ARG_APP_ENCRYPT)) && (!(args.prv_flags & ARG_APP_DECRYPT)))
+  if((!(args.flags & ARG_APP_ENCRYPT)) && (!(args.flags & ARG_APP_DECRYPT)))
   {
     printf("-e (encrypt) or -d (decrypt) needs to be specified!\n\n");
     return 0;
@@ -183,11 +201,10 @@ static int arg_valid(app_arg_t args)
 
 static void usage(void)
 {
-  printf("des_illustrated <-e or -d> -k <key file> -f <data file> [OPTIONS] \n\n");
-  printf("\t-e encrypt\n");
-  printf("\t-d decrypt\n");
+  printf("des_illustrated [-e or -d] <data file> -k <key file> [OPTIONS] \n\n");
+  printf("\t-e encrypt file\n");
+  printf("\t-d decrypt file\n");
   printf("\t-k key file in hex string format\n");
-  printf("\t-f data file to encrypt/decrypt\n");
   printf("\t-o <optional> output file to save the result\n");
   printf("\t-q <optional> quiet mode - no console output except in case of errors\n");
 }
@@ -1398,7 +1415,7 @@ key_end:
 
 int des_printf(const char* restrict format, ...)
 {
-  if(g_app_arg.prv_flags & ARG_APP_QUIET)
+  if(g_app_arg.flags & ARG_APP_QUIET)
     return 0;
 
   va_list arg;
