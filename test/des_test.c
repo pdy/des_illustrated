@@ -153,7 +153,7 @@ int main(int argc, char **argv)
     if(correct_encrypt_result[j] != (unsigned char)file_content[j])
     {
       printf("\n\n!!! ENCRYPTING FAILED !!!\n %s\n\n", lewinski.data_filename);
-      //remove_file(tmp_bin_file_path);
+      remove_file(tmp_bin_file_path);
       return 0;
     }
   }
