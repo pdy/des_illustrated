@@ -821,9 +821,9 @@ static void msg_ip_reverse(const uint8_t * const final_RL, uint8_t *msg_rev_IP)
   msg_rev_IP[2] |= final_RL[GET_BYTE_IDX(14)] << 2 & 0x10;
   msg_rev_IP[3] |= final_RL[GET_BYTE_IDX(13)] << 1 & 0x10;
   msg_rev_IP[4] |= final_RL[GET_BYTE_IDX(12)]      & 0x10;
-  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(13)] >> 1 & 0x10;
-  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(12)] >> 2 & 0x10;
-  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(11)] >> 3 & 0x10;
+  msg_rev_IP[5] |= final_RL[GET_BYTE_IDX(11)] >> 1 & 0x10;
+  msg_rev_IP[6] |= final_RL[GET_BYTE_IDX(10)] >> 2 & 0x10;
+  msg_rev_IP[7] |= final_RL[GET_BYTE_IDX(9) ] >> 3 & 0x10;
 
   msg_rev_IP[0] |= final_RL[GET_BYTE_IDX(56)] << 3 & 0x08;
   msg_rev_IP[1] |= final_RL[GET_BYTE_IDX(55)] << 2 & 0x08;
