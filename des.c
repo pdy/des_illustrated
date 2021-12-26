@@ -692,7 +692,7 @@ static void msg_ip(const uint8_t * const buffer, uint8_t *ret)
    *
    */
 
-  ret[0] |= buffer[GET_BYTE_IDX(58)] << 2 & 0x80;
+  ret[0] |= buffer[GET_BYTE_IDX(58)] << 1 & 0x80;
   ret[0] |= buffer[GET_BYTE_IDX(50)]      & 0x40;
   ret[0] |= buffer[GET_BYTE_IDX(42)] >> 1 & 0x20;
   ret[0] |= buffer[GET_BYTE_IDX(34)] >> 2 & 0x10;
