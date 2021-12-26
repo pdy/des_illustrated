@@ -31,20 +31,20 @@
 
 const char *data_filename[] =
 {
-  "data_1.bin",
-  "data_2.bin"
+  "data/data_1.bin",
+  "data/data_2.bin"
 };
 
 const char *key_filename[] =
 {
-  "hex_key_1.txt",
-  "hex_key_2.txt"
+  "data/hex_key_1.txt",
+  "data/hex_key_2.txt"
 };
 
 const char *cipher_filename[] = 
 {
-  "cipher_1.bin",
-  "cipher_2.bin"
+  "data/cipher_1.bin",
+  "data/cipher_2.bin"
 };
 
 const char *key[] =
@@ -77,9 +77,9 @@ typedef struct lewinski_t
 }lewinski_t;
 
 const static lewinski_t lewinski = {
-  .data_filename = "lewinski_data.bin",
-  .cipher_filename = "lewinski_cipher.bin",
-  .key_filename = "lewinski_key.txt",
+  .data_filename = "data/lewinski_data.bin",
+  .cipher_filename = "data/lewinski_cipher.bin",
+  .key_filename = "data/lewinski_key.txt",
   
   .data_not_padded = "Your lips are smoother than vaseline\r\n",
   .key_hex_str  = "0E329232EA6D0D73",
