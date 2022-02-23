@@ -70,7 +70,7 @@ enum operation
   decrypt
 };
 
-typedef struct app_arg_t
+typedef struct 
 {
   enum operation op;
   char key_file[INPUT_FILES_LEN];
@@ -200,12 +200,12 @@ static void usage(void)
   printf("\t-o <optional> output file to save the result\n");
   printf("\t-q <optional> quiet mode - no console output except in case of errors\n");
 }
-typedef struct key_rotation_t
+typedef struct 
 {
   uint8_t *subkeys;
 } key_rotation_t;
 
-typedef struct key_subkey_t
+typedef struct 
 {
   uint8_t *ptr;
   size_t size;
@@ -1335,8 +1335,6 @@ int main(int argc, char **argv)
   key_rotation_print(key_rot);
   des_printf("\n");
 #endif
-  
-  // single block msg handling
   
   uint8_t *msg_file_buffer = NULL;
   const unsigned long msg_file_size = file_read_all(g_app_arg.data_file, (char**)&msg_file_buffer);
