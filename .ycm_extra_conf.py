@@ -14,6 +14,7 @@ flags = [
     '-Wno-unused-variable',
     '-Wno-format-nonliteral',
     '-Wno-padded',
+    '-Wno-declaration-after-statement',
     '-std=c99',
     '-x','c',
     '-I','.'

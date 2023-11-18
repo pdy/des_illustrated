@@ -172,7 +172,7 @@ int main(int argc, char **argv)
     return 0;
   } 
 
-  const unsigned char *correct_decrypt_result = lewinski.data_not_padded;
+  const  char * const correct_decrypt_result = lewinski.data_not_padded;
   for(size_t j = 0; j < decrypt_bytes_read && strlen(lewinski.data_not_padded); ++j)
   {
     if(correct_decrypt_result[j] != (unsigned char)file_content[j])
