@@ -213,7 +213,7 @@ typedef struct
 
 } key_subkey_t;
 
-static key_rotation_t init_key_rot()
+static key_rotation_t init_key_rot(void)
 {
   key_rotation_t ret;
   ret.subkeys = (uint8_t*)malloc(KEY_SUBKEYS_NUM * KEY_ITER_SIZE * sizeof *ret.subkeys);
