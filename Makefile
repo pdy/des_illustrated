@@ -33,6 +33,7 @@ post-build: main-build
 
 main-build: pre-build
 	@$(MAKE) --no-print-directory $(BUILD)/des
+	@$(MAKE) --no-print-directory $(BUILD)/des_nocrt
 	
 clean:
 	@rm -r ./bin
